@@ -1,4 +1,4 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Entel Empresas · HONOR Rewards</title></head><body><div style="font-family:Arial;padding:24px">Cargando HONOR Rewards...</div><script src="p1.js"></script>
+<!doctype html><html translate="no" class="notranslate"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="google" content="notranslate"><title>Entel Empresas · HONOR Rewards</title></head><body><div style="font-family:Arial;padding:24px">Cargando HONOR Rewards...</div><script src="p1.js"></script>
 <script src="p2.js"></script>
 <script src="p3.js"></script>
 <script src="p4.js"></script>
@@ -12,7 +12,15 @@
   if(gzip.length<19||gzip[0]!==31||gzip[1]!==139) throw new Error('Contenido de HONOR Rewards incompleto');
   const raw=gzip.slice(10,gzip.length-8);
   const ds=new DecompressionStream('deflate-raw');
-  const txt=await new Response(new Blob([raw]).stream().pipeThrough(ds)).text();
+  let txt=await new Response(new Blob([raw]).stream().pipeThrough(ds)).text();
+  txt=txt.replace(/(id:'cafe'[\s\S]*?img:')[^']*'/,"$1assets/cafe.webp'");
+  txt=txt.replace(/(id:'aerolight'[\s\S]*?img:')[^']*'/,"$1assets/aerolight.webp'");
+  txt=txt.replace(/(id:'vitalize'[\s\S]*?img:')[^']*'/,"$1assets/vitalize.webp'");
+  txt=txt.replace(/(id:'earbuds'[\s\S]*?img:')[^']*'/,"$1assets/earbuds.webp'");
+  txt=txt.replace(/(id:'airfryer'[\s\S]*?img:')[^']*'/,"$1assets/airfryer.webp'");
+  txt=txt.replace(/(id:'robot'[\s\S]*?img:')[^']*'/,"$1assets/robot.webp'");
+  txt=txt.replace('<head>','<head><meta name="google" content="notranslate">');
+  txt=txt.replace('<html','<html translate="no" class="notranslate"');
   document.open();document.write(txt);document.close();
  }catch(e){document.body.innerHTML='<pre style="padding:20px">Error al cargar HONOR Rewards: '+e+'</pre>'}
 })();
