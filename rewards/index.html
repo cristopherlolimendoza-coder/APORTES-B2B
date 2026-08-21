@@ -1,12 +1,19 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Entel Empresas · HONOR Rewards</title></head><body><div style="font-family:Arial;padding:24px">Cargando...</div>
-<script src="p1.js"></script>
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Entel Empresas · HONOR Rewards</title></head><body><div style="font-family:Arial;padding:24px">Cargando HONOR Rewards...</div><script src="p1.js"></script>
 <script src="p2.js"></script>
 <script src="p3.js"></script>
 <script src="p4.js"></script>
 <script src="p5.js"></script>
 <script src="p6.js"></script>
-<script src="p7.js"></script>
-<script src="p8.js"></script>
-<script src="p9.js"></script>
-<script src="p10.js"></script>
-<script>try{document.open();document.write(window.__PAGE_HTML);document.close();}catch(e){document.body.innerHTML='<pre style="padding:20px">Error al cargar HONOR Rewards: '+e+'</pre>'}</script></body></html>
+<script src="p7.js"></script><script>
+(async()=>{
+ try{
+  const b64=window.__PAGE_B64||'';
+  const gzip=Uint8Array.from(atob(b64),c=>c.charCodeAt(0));
+  if(gzip.length<19||gzip[0]!==31||gzip[1]!==139) throw new Error('Contenido de HONOR Rewards incompleto');
+  const raw=gzip.slice(10,gzip.length-8);
+  const ds=new DecompressionStream('deflate-raw');
+  const txt=await new Response(new Blob([raw]).stream().pipeThrough(ds)).text();
+  document.open();document.write(txt);document.close();
+ }catch(e){document.body.innerHTML='<pre style="padding:20px">Error al cargar HONOR Rewards: '+e+'</pre>'}
+})();
+</script></body></html>
