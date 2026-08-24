@@ -29,3 +29,18 @@ DATA.push({"id":"CG-202606-20104505784","fecha":null,"mesOrigen":"jun-26","mesSe
   ['fm','fc','fe','fz','fq','cl'].forEach(id=>{const e=document.getElementById(id);if(e)e.addEventListener(id==='fq'?'input':'change',schedule);if(id==='cl'&&e)e.addEventListener('click',schedule)});
   window.addEventListener('load',schedule);setTimeout(enhance,80);
 })();
+(function(){
+  const pct2=(v,t)=>t?((v/t)*100).toFixed(1)+'%':'0.0%';
+  const states=['Ganada','Perdida','En curso'];
+  function renderPctBars(){
+    if(typeof F!=='function'||typeof $!=='function'||typeof M==='undefined')return;
+    const a=F();
+    const monthly=M.map(m=>{const rows=a.filter(r=>r.mesOrigen===m);const s={Ganada:0,Perdida:0,'En curso':0};rows.forEach(r=>s[r.estado]=(s[r.estado]||0)+(+r.aporte||0));return {m,s,total:states.reduce((z,k)=>z+s[k],0)}});
+    const maxMonth=Math.max(1,...monthly.map(x=>x.total));
+    ['bars','bars2'].forEach(id=>{const root=$(id);if(!root)return;root.innerHTML='<div class="chart"><div class="bars">'+monthly.map(x=>`<div class="grp">${states.map(k=>{const v=x.s[k]||0,p=pct2(v,x.total),h=Math.max(2,v/maxMonth*150);return `<div style="width:30%;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;min-width:0"><span style="font-size:9px;font-weight:900;color:#526176;margin-bottom:4px;white-space:nowrap">${p}</span><div class="bar" title="${k}: ${mo(v)} · ${p} del aporte de ${MN[x.m]}" style="height:${h}px;width:100%;background:${C[k]}"></div></div>`}).join('')}</div>`).join('')+'</div><div class="xl">'+monthly.map(x=>`<span>${MN[x.m]}</span>`).join('')+'</div><div class="leg">'+states.map(k=>`<span><i class="dot" style="background:${C[k]}"></i>${k}</span>`).join('')+'</div></div>'});
+  }
+  const rerender=()=>setTimeout(renderPctBars,60);
+  ['fm','fc','fe','fz','fq'].forEach(id=>{const e=document.getElementById(id);if(e)e.addEventListener(id==='fq'?'input':'change',rerender)});
+  const clearBtn=document.getElementById('cl');if(clearBtn)clearBtn.addEventListener('click',rerender);
+  window.addEventListener('load',rerender);setTimeout(renderPctBars,160);
+})();
