@@ -95,6 +95,7 @@ async function migrate(){
  for(let entry of rows){try{await submit(entry.r,entry.n);done++}catch(e){msg('Migrados '+done+'/'+rows.length+': '+e.message,true);return}}
  localStorage.removeItem(LOCAL_KEY);oldLocal.overrides={};oldLocal.newRows=[];msg('Migrados '+done+' registros');lockControls();
 }
+const originalStrategyGo=strategyGo;strategyGo=function(){originalStrategyGo();lockControls()};
 quickState=cloudState;quickClose=cloudClose;
 document.getElementById('saveEdit').onclick=cloudForm;
 document.getElementById('resetLocal').onclick=()=>location.reload();
