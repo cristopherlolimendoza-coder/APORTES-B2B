@@ -65,7 +65,7 @@ export default {
    if(!env.APORTES_DB)return response({ok:false,error:'Almacenamiento no disponible'},503);
    if(p==='/api/auth'&&req.method==='POST'){const ok=await permitted(req);return response({ok},ok?200:401);}
    if(p==='/api/save'||p==='/api/test-write'){
-    if(req.method!=='PUT')return response({ok:false,error:'Método inválido'},405);
+    if(req.method!==(p.endsWith('/test-write')?'POST':'PUT'))return response({ok:false,error:'Método inválido'},405);
     if(req.headers.get('origin')&&req.headers.get('origin')!==u.origin)return response({ok:false,error:'Origen inválido'},403);
     if(!await permitted(req))return response({ok:false,error:'Clave inválida'},401);
     if(+(req.headers.get('content-length')||0)>30000)return response({ok:false,error:'Solicitud extensa'},413);
