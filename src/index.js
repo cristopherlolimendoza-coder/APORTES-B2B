@@ -29,6 +29,16 @@ export class AportesDB{
  async fetch(req){
   const u=new URL(req.url);
   if(u.pathname==='/data'){const records=await this.state.storage.list({prefix:'item:'});return response({ok:true,entries:[...records.values()]});}
+  if(u.pathname==='/test-write'&&req.method==='POST'){
+    const key='health:writeprobe',stamp=new Date().toISOString();
+    try{
+      await this.state.storage.put(key,{stamp});
+      const result=await this.state.storage.get(key);
+      await this.state.storage.delete(key);
+      if(!result||result.stamp!==stamp)throw Error('No se pudo verificar escritura');
+      return response({ok:true,storage:'read-write'});
+    }catch(e){return response({ok:false,error:'La base no permitió escribir. Reintenta o comunica el error.'},503);}
+  }
   if(u.pathname==='/history'){let id=str(u.searchParams.get('id'),130);const records=await this.state.storage.list({prefix:'hist:'+id+':',reverse:true,limit:25});return response({ok:true,entries:[...records.values()]});}
   if(u.pathname==='/save'&&req.method==='PUT'){
    let body;try{body=await req.json();}catch{return response({ok:false,error:'JSON inválido'},400);}
@@ -50,11 +60,11 @@ export class AportesDB{
 export default {
  async fetch(req,env){
   const u=new URL(req.url),p=u.pathname;
-  if(p==='/api/health')return response({ok:true,persistence:!!env.APORTES_DB,version:'honor-live-1'});
+  if(p==='/api/health')return response({ok:true,persistence:!!env.APORTES_DB,version:'honor-live-2'});
   if(p.startsWith('/api/')){
    if(!env.APORTES_DB)return response({ok:false,error:'Almacenamiento no disponible'},503);
    if(p==='/api/auth'&&req.method==='POST'){const ok=await permitted(req);return response({ok},ok?200:401);}
-   if(p==='/api/save'){
+   if(p==='/api/save'||p==='/api/test-write'){
     if(req.method!=='PUT')return response({ok:false,error:'Método inválido'},405);
     if(req.headers.get('origin')&&req.headers.get('origin')!==u.origin)return response({ok:false,error:'Origen inválido'},403);
     if(!await permitted(req))return response({ok:false,error:'Clave inválida'},401);
