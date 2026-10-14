@@ -14,15 +14,16 @@ access.after(importBlock);
 const oldLocal=(()=>{try{return JSON.parse(localStorage.getItem(LOCAL_KEY)||'null')||{}}catch(e){return {}}})();
 function msg(s,fail){let el=document.getElementById('saveMsg');if(el){el.textContent=s;el.style.color=fail?'#bb3930':'#248446';}}
 function patch(r){return {cliente:String(r.cliente||''),ruc:String(r.ruc||''),canal:r.canal||'Empresas',ejecutivo:String(r.ejecutivo||''),modelos:String(r.modelos||''),unidades:Number(r.unidades)||0,aporte:Number(r.aporte)||0,estado:r.estado||'En curso',mesOrigen:r.mesOrigen||'oct-26',mesCierre:r.mesCierre||'',anioCierre:r.anioCierre||null,comentario:String(r.comentario||'')};}
-function canEdit(){if(!secret){msg('Activa la edición con la clave',true);document.getElementById('cloudKey').focus();return false}if(!ready){msg('Esperando a la base central',true);return false}return true;}
+function canEdit(){if(!secret){msg('Para modificar cuentas, primero ingresa tu clave y pulsa Activar edición',true);document.getElementById('cloudKey').scrollIntoView({behavior:'smooth',block:'center'});document.getElementById('cloudKey').focus();return false}if(!ready){msg('Esperando a la base central',true);return false}return true;}
 function lockControls(){
  let ok=!!secret&&ready;
  let input=document.getElementById('cloudKey'),btn=document.getElementById('cloudLogin'),exit=document.getElementById('cloudLogout');
  input.style.display=btn.style.display=ok?'none':'';
  exit.style.display=ok?'':'none';
  document.getElementById('cloudAccess').textContent=ok?'Edición habilitada · guardado en la nube':'Modo consulta';
- document.getElementById('newAccount').disabled=!ok;
- document.querySelectorAll('[data-edit],[data-state],[data-close]').forEach(el=>{el.disabled=!ok;});
+ document.getElementById('newAccount').disabled=false;
+ document.querySelectorAll('[data-state],[data-close]').forEach(el=>{el.disabled=!ok;});
+ document.querySelectorAll('[data-edit]').forEach(el=>{el.disabled=false;el.title=ok?'Editar esta cuenta':'Haz clic para activar edición con tu clave';});
  let drafts=(oldLocal.overrides&&Object.keys(oldLocal.overrides).length)||(oldLocal.newRows&&oldLocal.newRows.length);
  importBlock.style.display=drafts?'':'none';document.getElementById('cloudImport').disabled=!ok;
 }
@@ -70,7 +71,10 @@ async function login(){
  let b=document.getElementById('cloudLogin');b.disabled=true;msg('Verificando clave…');
  try{let resp=await fetch('/api/auth',{method:'POST',headers:{Authorization:'Bearer '+key},cache:'no-store'});
  if(!resp.ok)throw Error('Clave de edición incorrecta');
- secret=key;sessionStorage.setItem(SESSION_KEY,key);el.value='';msg('Edición habilitada');lockControls()}
+ let test=await fetch('/api/test-write',{method:'POST',headers:{Authorization:'Bearer '+key},cache:'no-store'});
+ let t;try{t=await test.json()}catch(e){t={ok:false,error:'Respuesta inválida'};}
+ if(!test.ok||!t.ok)throw Error('La clave es válida, pero la base de datos no permitió guardar: '+(t.error||test.status));
+ secret=key;sessionStorage.setItem(SESSION_KEY,key);el.value='';msg('Edición habilitada y escritura verificada');lockControls()}
  catch(e){msg(e.message,true)}finally{b.disabled=false}
 }
 async function start(){
@@ -81,7 +85,7 @@ async function start(){
  if(!row){row={id:item.id,fecha:null,mesSeguimiento:item.patch?.mesOrigen||'oct-26',nota:'Creada desde la web'};DATA.push(row)}
  Object.assign(row,item.patch||{});ver.set(String(item.id),Number(item.rev)||0);}
  ready=true;document.getElementById('cloudInfo').textContent='Conectado a Cloudflare. Los cambios autorizados se guardan en una base central y se verán desde la laptop o el celular.';
- let k=sessionStorage.getItem(SESSION_KEY);if(k){let ar=await fetch('/api/auth',{method:'POST',headers:{Authorization:'Bearer '+k},cache:'no-store'});if(ar.ok)secret=k;else sessionStorage.removeItem(SESSION_KEY);}
+ let k=sessionStorage.getItem(SESSION_KEY);if(k){let ar=await fetch('/api/test-write',{method:'POST',headers:{Authorization:'Bearer '+k},cache:'no-store'});if(ar.ok)secret=k;else sessionStorage.removeItem(SESSION_KEY);}
  msg('Datos sincronizados');
  }catch(e){ready=false;secret='';document.getElementById('cloudInfo').textContent='Conexión central no disponible. La web sigue en consulta y no permitirá guardar hasta recuperar el servicio.';msg(e.message,true)}
  strategyGo();lockControls();
@@ -96,6 +100,10 @@ async function migrate(){
  localStorage.removeItem(LOCAL_KEY);oldLocal.overrides={};oldLocal.newRows=[];msg('Migrados '+done+' registros');lockControls();
 }
 const originalStrategyGo=strategyGo;strategyGo=function(){originalStrategyGo();lockControls()};
+const legacyOpenEdit=openEdit,legacyNewEdit=newEdit;
+openEdit=function(id){if(!canEdit())return;legacyOpenEdit(id)};
+newEdit=function(){if(!canEdit())return;legacyNewEdit()};
+document.getElementById('newAccount').onclick=newEdit;
 quickState=cloudState;quickClose=cloudClose;
 document.getElementById('saveEdit').onclick=cloudForm;
 document.getElementById('resetLocal').onclick=()=>location.reload();
