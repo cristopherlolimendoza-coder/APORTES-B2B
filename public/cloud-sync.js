@@ -41,10 +41,12 @@ async function cloudState(id,value){if(!canEdit()){strategyGo();lockControls();r
  if(value==='En curso'){copy.mesCierre='';copy.anioCierre=null;copy.cierre='';}
  try{await submit(copy,false)}catch(e){msg(e.message,true);strategyGo();lockControls();}
 }
-async function cloudClose(id,value){if(!canEdit()){strategyGo();lockControls();return}
+async function cloudClose(id,value,selectedYear){if(!canEdit()){strategyGo();lockControls();return}
  let row=by(id);if(!row)return;
  if(value&&row.estado==='En curso'){msg('Primero elige Ganada o Perdida',true);strategyGo();lockControls();return}
- try{await submit({...row,mesCierre:value,anioCierre:value?(row.anioCierre||2026):null},false)}
+ const dropdown=document.querySelector('[data-close-year="'+CSS.escape(encodeURIComponent(String(id)))+'"]');
+ const preferred=Number(selectedYear||dropdown?.value||row.anioCierre||2026);
+ try{await submit({...row,mesCierre:value,anioCierre:value?preferred:null},false)}
  catch(e){msg(e.message,true);strategyGo();lockControls();}
 }
 async function cloudForm(){
