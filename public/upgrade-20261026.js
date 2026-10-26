@@ -27,7 +27,7 @@
   function monthOptions(selected,blank=true){return (blank?'<option value="">Sin confirmar</option>':'')+MONTHS.map(m=>`<option value="${m}" ${selected===m?'selected':''}>${m}</option>`).join('')}
   function yearOptions(selected){return YEARS.map(y=>`<option value="${y}" ${Number(selected)===y?'selected':''}>${y}</option>`).join('')}
 
-  function normalize(){return typeof window.HONOR_NORMALIZE_ACCOUNTS==='function'?window.HONOR_NORMALIZE_ACCOUNTS():window.HONOR_ACCOUNT_AUDIT}
+  function normalize(){return typeof window.HONOR_NORMALIZE_ACCOUNTS==='function'?window.HONOR_NORMALIZE_ACCOUNTS(false):window.HONOR_ACCOUNT_AUDIT}
 
   function addKamList(){
     if(!document.getElementById('kamList')){
