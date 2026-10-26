@@ -12,7 +12,10 @@ const importBlock=document.createElement('div');importBlock.className='warn';imp
 importBlock.innerHTML='Se encontraron cambios anteriores guardados solo en este navegador. <button class="btn" id="cloudImport" type="button">Pasarlos a la nube</button>';
 access.after(importBlock);
 const oldLocal=(()=>{try{return JSON.parse(localStorage.getItem(LOCAL_KEY)||'null')||{}}catch(e){return {}}})();
-function msg(s,fail){let el=document.getElementById('saveMsg');if(el){el.textContent=s;el.style.color=fail?'#bb3930':'#248446';}}
+function msg(s,fail){let el=document.getElementById('saveMsg');if(el){el.textContent=s;el.style.color=fail?'#bb3930':'#248446';}
+ const dlg=document.getElementById('editDlg'),error=document.getElementById('editError');
+ if(dlg?.open&&error){error.style.display='block';error.textContent=s;error.style.background=fail?'#fff2f0':'#eaf7ed';error.style.color=fail?'#ad3026':'#247a3c';}
+}
 function patch(r){return {cliente:String(r.cliente||''),ruc:String(r.ruc||''),canal:r.canal||'Empresas',ejecutivo:String(r.ejecutivo||''),modelos:String(r.modelos||''),unidades:Number(r.unidades)||0,aporte:Number(r.aporte)||0,estado:r.estado||'En curso',mesOrigen:r.mesOrigen||'oct-26',mesCierre:r.mesCierre||'',anioCierre:r.anioCierre||null,comentario:String(r.comentario||'')};}
 function canEdit(){if(!secret){msg('Para modificar cuentas, primero ingresa tu clave y pulsa Activar edición',true);document.getElementById('cloudKey').scrollIntoView({behavior:'smooth',block:'center'});document.getElementById('cloudKey').focus();return false}if(!ready){msg('Esperando a la base central',true);return false}return true;}
 function lockControls(){
@@ -31,7 +34,12 @@ async function submit(r,isNew){
  if(!canEdit())throw Error('Acceso de edición necesario');
  let id=String(r.id),resp=await fetch('/api/save',{method:'PUT',headers:{Authorization:'Bearer '+secret,'Content-Type':'application/json'},body:JSON.stringify({id,isNew:!!isNew,rev:ver.get(id)||0,patch:patch(r)})});
  let data;try{data=await resp.json()}catch{throw Error('Sin respuesta válida del servidor')}
- if(!resp.ok||!data.ok)throw Error(data.error||'No se guardó el cambio');
+ if(!resp.ok||!data.ok)throw Error((data.error||'No se guardó el cambio')+' (código '+resp.status+')');
+ const audit=await fetch('/api/history?id='+encodeURIComponent(id),{cache:'no-store'});
+ if(!audit.ok)throw Error('El servidor respondió al guardado, pero no permitió verificar el historial. Recarga antes de reintentar.');
+ const history=await audit.json();
+ if(!history.ok||!Array.isArray(history.entries)||!history.entries.some(entry=>entry.rev===data.entry.rev))
+ throw Error('El servidor respondió al guardado, pero no se pudo comprobar que el cambio quedara almacenado. Recarga antes de reintentar.');
  let row=by(id);if(!row){row={id,fecha:null,mesSeguimiento:r.mesOrigen,nota:'Creada desde la web'};DATA.push(row)}
  Object.assign(row,data.entry.patch);ver.set(id,data.entry.rev);
  msg('Guardado en Cloudflare');strategyGo();lockControls();return data.entry;
@@ -103,8 +111,8 @@ async function migrate(){
 }
 const originalStrategyGo=strategyGo;strategyGo=function(){originalStrategyGo();lockControls()};
 const legacyOpenEdit=openEdit,legacyNewEdit=newEdit;
-openEdit=function(id){if(!canEdit())return;legacyOpenEdit(id)};
-newEdit=function(){if(!canEdit())return;legacyNewEdit()};
+openEdit=function(id){if(!canEdit())return;legacyOpenEdit(id);const e=document.getElementById('editError');if(e){e.style.display='none';e.textContent='';}};
+newEdit=function(){if(!canEdit())return;legacyNewEdit();const e=document.getElementById('editError');if(e){e.style.display='none';e.textContent='';}};
 document.getElementById('newAccount').onclick=newEdit;
 quickState=cloudState;quickClose=cloudClose;
 document.getElementById('saveEdit').onclick=cloudForm;
