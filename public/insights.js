@@ -70,7 +70,7 @@ function addExecFilter(){
  var sel=document.getElementById('fej');var names=[...new Set(DATA.map(function(r){return r.ejecutivo||''}).filter(Boolean))].sort(function(a,b){return a.localeCompare(b,'es')});
  names.forEach(function(n){var op=document.createElement('option');op.value=n;op.textContent=n;sel.appendChild(op)});
  sel.onchange=function(){if(typeof strategyGo==='function')strategyGo();draw()}
- if(typeof window.F==='function'){var oldF=window.F;window.F=function(){var a=oldF(),v=sel.value;return v?a.filter(function(r){return r.ejecutivo===v}):a}}
+ if(typeof window.F==='function'){var oldF=window.F;window.F=function(){var a=oldF(),v=sel.value;return v?a.filter(function(r){return v==='__MISSING__'?!r.ejecutivo:r.ejecutivo===v}):a}}
 }
 var auditKey='honor_b2b_changes_v1',audit=[];
 try{var saved=JSON.parse(localStorage.getItem(auditKey)||'[]');if(Array.isArray(saved))audit=saved}catch(e){}
@@ -129,6 +129,12 @@ function build(){
  document.getElementById('nameAliases').innerHTML=normalized.length?normalized.map(function(q){return safe(q.old)+' → <b>'+safe(q.name)+'</b>'}).filter(function(s,i,arr){return arr.indexOf(s)===i}).join(' · '):'No se encontraron variantes verificables.';
 }
 function draw(){
+ var filter=document.getElementById('fej');
+ if(filter){
+   const prev=filter.value,opts=[...new Set(DATA.map(r=>r.ejecutivo||'').filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
+   filter.innerHTML='<option value="">Todos</option><option value="__MISSING__">Sin KAM asignado</option>'+opts.map(n=>'<option value="'+safe(n)+'">'+safe(n)+'</option>').join('');
+   filter.value=prev;if(filter.selectedIndex<0)filter.value='';
+ }
  var a=scoped(),all=scopeIgnoreMonth(),monthly=grouped(all),cur=grouped(a),s=document.getElementById('summaryInsights'),c=document.getElementById('accountInsights'),p=document.getElementById('aporteInsights');if(!s||!c||!p)return;
  var first=monthly[0],last=monthly[monthly.length-1],delta=first.n?((last.n-first.n)/first.n*100):0;
  s.innerHTML=card('Evolución de oportunidades','Cantidad mensual de solicitudes/opciones comerciales registradas; haz clic en un punto para filtrar.',lineChart(monthly,'n','integer'))+
@@ -138,7 +144,7 @@ function draw(){
  c.innerHTML=card('Oportunidades por mes','Variación de la carga comercial sin añadir columnas o campos.',lineChart(monthly,'n','integer'))+
  card('Participación de estados','Resultado y pipeline por mes de origen.',stateBars(monthly,'n'))+
  card('Ejecutivos consolidados','Haz clic en un ejecutivo para filtrar toda la web.',execRanking(a),true);
- p.innerHTML=card('Aporte referencial por mes','Gráfico con variaciones mensuales y filtros por canal/ejecutivo. Octubre está parcial al 12/10.',lineChart(monthly,'aporte','money'))+
+ p.innerHTML=card('Aporte referencial por mes','Gráfico con variaciones mensuales y filtros por canal/ejecutivo. Octubre está parcial al 26/10.',lineChart(monthly,'aporte','money'))+
  card('Aporte por situación comercial','Distribución del aporte en cada mes; porcentajes suman 100%.',stateBars(monthly,'aporte'))+
  card('Variación frente al mes anterior','Montos nominales y evolución porcentual versus el mes previo.',financeMonthly(monthly),true)+
  card('Aportes por modelo','Ranking informativo: una propuesta puede contener alternativas, por lo que no debe sumarse al aprobado total.','<div id="insModelRanking"></div>',true);
@@ -149,7 +155,7 @@ function draw(){
  var h=document.getElementById('histAccount');if(h){var selected=h.value,accountMap={};DATA.forEach(function(r){var key=r.ruc||r.cliente;if(!accountMap[key])accountMap[key]=r.cliente+' · '+(r.ruc||'sin RUC')});h.innerHTML='<option value="">Selecciona un cliente único</option>'+Object.keys(accountMap).sort(function(a,b){return accountMap[a].localeCompare(accountMap[b],'es')}).map(function(k){return '<option value="'+safe(k)+'">'+safe(accountMap[k])+'</option>'}).join('');h.value=selected||'';historyTimeline()}
  renderAudit();
 }
-monthInputs();addExecFilter();build();augmentEditing();draw();
+monthInputs();addExecFilter();build();draw();
 ['fm','fc','fe','fz','fq'].forEach(function(id){var e=document.getElementById(id);if(e)e.addEventListener(id==='fq'?'input':'change',function(){setTimeout(draw,25)})});
 document.getElementById('cl').addEventListener('click',function(){setTimeout(draw,25)});
 })();
