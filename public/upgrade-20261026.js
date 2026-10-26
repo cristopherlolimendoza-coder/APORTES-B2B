@@ -1,14 +1,14 @@
 /* Mejoras no destructivas: edición guiada, meses/años de cierre, historial y auditoría. */
 (()=>{
   const MONTHS=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-  const YEARS=Array.from({length:15},(_,i)=>2026+i); // 2026–2040
+  const YEARS=Array.from({length:21},(_,i)=>2020+i); // 2020–2040
   const KAMS=[
     'Rocío del Carmen Valdivia Nava','Jessica Paula Gonzales Bamonde','María Gabriela Díaz Gonzales',
     'Ljubica Velickovich Roca','Vanessa Tuesta Lujan','Brunella Huarcaya Lora',
     'Santiago Diez de Tejada Agar','Valeria Brandariz','Mónica Teresa Castro Ríos'
   ];
   const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-  const by=id=>(window.DATA||[]).find(r=>String(r.id)===String(id));
+  const by=id=>(typeof DATA !== 'undefined' ? DATA : []).find(r=>String(r.id)===String(id));
   const editingEnabled=()=>/Edición habilitada/i.test(document.getElementById('cloudAccess')?.textContent||'');
   let pendingEdit='',pendingNew=false,filterWrapped=false,renderWrapped=false;
 
@@ -84,7 +84,7 @@
       if(row.estado!=='En curso'&&!row.mesCierre){sel.style.borderColor='#d97706';sel.title='Falta completar fecha de cierre'}else sel.style.borderColor='';
     });
     document.querySelectorAll('[data-edit]').forEach(btn=>{
-      const id=btn.dataset.edit;if(btn.parentElement.querySelector(`[data-history="${CSS.escape(id)}"]`))return;
+      const id=btn.dataset.edit;if([...btn.parentElement.querySelectorAll('[data-history]')].some(x=>x.dataset.history===id))return;
       const h=document.createElement('button');h.type='button';h.className='editbtn';h.dataset.history=id;h.textContent='Historial';h.style.marginLeft='5px';btn.after(h);
     });
     const th=[...document.querySelectorAll('#cue th')].find(x=>x.textContent.trim()==='Mes cierre');if(th)th.textContent='Fecha de cierre';
@@ -115,8 +115,7 @@
 
   document.addEventListener('change',e=>{
     if(e.target.matches('#eestado')){enhanceForm();if(e.target.value==='En curso'){document.getElementById('emesCierre').value='';}}
-    if(e.target.matches('[data-close]')){const id=decodeURIComponent(e.target.dataset.close),row=by(id),year=e.target.parentElement.querySelector('[data-close-year]');if(row){row.anioCierre=e.target.value?Number(year?.value||row.anioCierre||2026):null;}}
-    if(e.target.matches('[data-close-year]')){const id=decodeURIComponent(e.target.dataset.closeYear),row=by(id);if(row&&row.mesCierre){row.anioCierre=Number(e.target.value);window.quickClose?.(id,row.mesCierre);}}
+    if(e.target.matches('[data-close-year]')){const id=decodeURIComponent(e.target.dataset.closeYear),row=by(id);if(row&&row.mesCierre){window.quickClose?.(id,row.mesCierre,Number(e.target.value));}}
   },true);
   document.addEventListener('click',e=>{const h=e.target.closest('[data-history]');if(h){e.preventDefault();showHistory(decodeURIComponent(h.dataset.history));}});
   document.getElementById('cloudLogin')?.addEventListener('click',waitForAccess);
