@@ -25,7 +25,9 @@
     ['20607649937', {cliente:'Haleon Perú S.R.L.', ejecutivo:'Rocío del Carmen Valdivia Nava'}],
     ['20546349781', {cliente:'Grupo de Contratistas Internacionales S.A.C.', ejecutivo:'Mónica Teresa Castro Ríos'}],
     ['20424295036', {cliente:'Los Andes S.A.C.', ejecutivo:'Mónica Teresa Castro Ríos'}],
-    ['20206018411', {cliente:'Tecsur S.A.', ejecutivo:'Mónica Teresa Castro Ríos'}]
+    ['20206018411', {cliente:'Tecsur S.A.', ejecutivo:'Mónica Teresa Castro Ríos'}],
+    ['20100061474', {cliente:'Representaciones Deco S.A.', ejecutivo:'Mónica Teresa Castro Ríos'}],
+    ['20131376503', {cliente:'Servicio Nacional de Adiestramiento en Trabajo Industrial (SENATI)', ejecutivo:'Alvaro Gomezdecordova'}]
   ]);
 
   const aliases = new Map();
@@ -50,20 +52,19 @@
     'Mónica Teresa Castro Ríos','Monica Teresa Castro Rios','Monica Teresa Castro','Mónica Castro','Monica Castro'
   ]);
 
-  function auditAndNormalize(){
+  function auditAndNormalize(apply=false){
     let accountUpdates = 0, aliasUpdates = 0;
     const signatures = new Map(), duplicateCandidates = [];
 
-    for(const row of (window.DATA || [])){
+    for(const row of (typeof DATA !== 'undefined' ? DATA : [])){
       const ruc = String(row.ruc || '').replace(/\D/g,'');
       const account = accounts.get(ruc);
       if(account){
         if(row.cliente !== account.cliente || row.ejecutivo !== account.ejecutivo) accountUpdates++;
-        row.cliente = account.cliente;
-        row.ejecutivo = account.ejecutivo;
+        if(apply){row.cliente = account.cliente;row.ejecutivo = account.ejecutivo;}
       }else{
         const canonical = aliases.get(normalize(row.ejecutivo));
-        if(canonical && row.ejecutivo !== canonical){ row.ejecutivo = canonical; aliasUpdates++; }
+        if(canonical && row.ejecutivo !== canonical){ if(apply) row.ejecutivo = canonical; aliasUpdates++; }
       }
 
       const signature = [
@@ -81,7 +82,7 @@
 
     const multiOpportunityAccounts = [];
     const grouped = new Map();
-    for(const row of (window.DATA || [])){
+    for(const row of (typeof DATA !== 'undefined' ? DATA : [])){
       const key = String(row.ruc || '').replace(/\D/g,'') || normalize(row.cliente);
       if(!key) continue;
       const list = grouped.get(key) || [];
@@ -101,7 +102,7 @@
   }
 
   window.HONOR_NORMALIZE_ACCOUNTS = auditAndNormalize;
-  auditAndNormalize();
+  auditAndNormalize(true);
 
   function loadUpgrade(){
     if(document.querySelector('script[data-honor-upgrade]')) return;
