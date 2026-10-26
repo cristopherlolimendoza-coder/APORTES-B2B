@@ -1,0 +1,7 @@
+/* Corrección de KAM confirmada por usuario el 26/10/2026; solo campo ejecutivo. */
+(()=>{
+ const assigned = new Map([["CG-202605-20104505784","Rocío del Carmen Valdivia Nava"],["CG-202606-20104505784","Rocío del Carmen Valdivia Nava"],["NEW-CG-20260717-20546349781","Mónica Teresa Castro Ríos"],["NEW-CG-20260717-20424295036","Mónica Teresa Castro Ríos"],["NEW-CG-20260821-20382748566","Jessica Paula Gonzales Bamonde"],["NEW-CG-20260824-20521218097","María Gabriela Díaz Gonzales"],["NEW-CG-20260828-20506675457","Ljubica Velickovich Roca"],["NEW-CG-20260901-20256211310","Vanessa Tuesta Lujan"],["NEW-CG-20260902-20505880171","Brunella Huarcaya Lora"],["NEW-CG-20260904-20231843460","Santiago Diez de Tejada Agar"],["NEW-CG-20260914-20536727524","Rocío del Carmen Valdivia Nava"],["NEW-CG-20260915-20601762219","Valeria Brandariz"],["NEW-CG-20260915-20336448337","Valeria Brandariz"],["NEW-CG-20260916-20475428634","Valeria Brandariz"],["NEW-CG-20260925-20101308678","Rocío del Carmen Valdivia Nava"],["NEW-CG-20260928-20607649937","Rocío del Carmen Valdivia Nava"],["NEW-CG-20261007-20546349781","Mónica Teresa Castro Ríos"],["NEW-CG-20261007-20424295036","Mónica Teresa Castro Ríos"]]);
+ let done=0;
+ for(const r of DATA){if(assigned.has(r.id)){r.ejecutivo=assigned.get(r.id);done++;}}
+ console.info('HONOR B2B: KAM actualizados',done);
+})();
