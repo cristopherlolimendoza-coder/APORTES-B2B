@@ -3,6 +3,62 @@ const ADMIN_HASH='1fbebe1a249010f50c9c86a1a20ff5d0ae4164ef165e971c6cc2bdbfcda6bf
 const months=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const states=['Ganada','Perdida','En curso'], channels=['Empresas','Corpo + Gobierno'], mc=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 const headers={'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'};
+const kamClientPatch=`
+;(()=>{
+  const monthOrder=['may-26','jun-26','jul-26','ago-26','sep-26','oct-26','nov-26','dic-26'];
+  const monthNames={'may-26':'Mayo','jun-26':'Junio','jul-26':'Julio','ago-26':'Agosto','sep-26':'Septiembre','oct-26':'Octubre','nov-26':'Noviembre','dic-26':'Diciembre'};
+  const norm=v=>String(v??'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+  const preferred=new Map([
+    ['rocio del carmen valdivia nava','Rocío del Carmen Valdivia Nava'],
+    ['jessica paula gonzales bamonde','Jessica Paula Gonzales Bamonde'],
+    ['jessica paola gonzales bamonde','Jessica Paula Gonzales Bamonde'],
+    ['maria gabriela diaz gonzales','María Gabriela Díaz Gonzales'],
+    ['ljubica velickovich roca','Ljubica Velickovich Roca'],
+    ['ljubica velicovich roca','Ljubica Velickovich Roca'],
+    ['vanessa tuesta lujan','Vanessa Tuesta Lujan'],
+    ['brunella huarcaya lora','Brunella Huarcaya Lora'],
+    ['santiago diez de tejada agar','Santiago Diez de Tejada Agar'],
+    ['monica teresa castro rios','Mónica Teresa Castro Ríos'],
+    ['maria fernanda zamora wong','María Fernanda Zamora Wong'],
+    ['maria fernanda zamora vong','María Fernanda Zamora Wong'],
+    ['violeta aguilar regalado','Violeta Aguilar Regalado'],
+    ['jose antonio garay pfuyo','José Antonio Garay Pfuyo'],
+    ['alvaro gomezdecordova','Álvaro Gomezdecordova'],
+    ['soraya farra munoz tremolada','Soraya Farra Muñoz Tremolada'],
+    ['soraya fara munoz tremolada','Soraya Farra Muñoz Tremolada'],
+    ['angela chonyen','Ángela Chonyen']
+  ]);
+  const canonical=v=>preferred.get(norm(v))||String(v??'').trim();
+  let cleaning=false;
+  function applyNames(){
+    if(typeof DATA==='undefined'||!Array.isArray(DATA))return;
+    DATA.forEach(r=>{if(r&&r.ejecutivo)r.ejecutivo=canonical(r.ejecutivo);});
+  }
+  function cleanFilters(){
+    if(cleaning)return;
+    const month=document.getElementById('fMonth'),exec=document.getElementById('fExec');
+    if(!month||!exec||typeof DATA==='undefined')return;
+    cleaning=true;
+    try{
+      applyNames();
+      const selectedMonth=month.value;
+      month.innerHTML='<option value="">Todos</option>'+monthOrder.filter(m=>DATA.some(r=>r.mesOrigen===m)).map(m=>'<option value="'+m+'">'+monthNames[m]+'</option>').join('');
+      month.value=selectedMonth;if(month.selectedIndex<0)month.value='';
+      const selectedExec=canonical(exec.value),names=[...new Set(DATA.map(r=>canonical(r.ejecutivo)).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
+      exec.innerHTML='<option value="">Todos</option>'+names.map(n=>'<option value="'+n.replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'">'+n.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</option>').join('');
+      exec.value=selectedExec;if(exec.selectedIndex<0)exec.value='';
+    }finally{cleaning=false;}
+  }
+  function install(){
+    const month=document.getElementById('fMonth'),exec=document.getElementById('fExec');
+    if(!month||!exec)return setTimeout(install,100);
+    const observer=new MutationObserver(()=>queueMicrotask(cleanFilters));
+    observer.observe(month,{childList:true});observer.observe(exec,{childList:true});
+    cleanFilters();setTimeout(cleanFilters,500);setTimeout(cleanFilters,1800);
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
+})();
+`;
 function response(x,s=200){return new Response(JSON.stringify(x),{status:s,headers});}
 function str(v,n=500){return typeof v==='string'?v.trim().slice(0,n):'';}
 function numeric(v,max=100000000,integer=false){let n=Number(v);if(!Number.isFinite(n)||n<0||n>max||(integer&&!Number.isInteger(n)))throw Error('Valor numérico inválido');return n;}
@@ -76,6 +132,11 @@ export class AportesDB{
 export default {
  async fetch(req,env){
   const u=new URL(req.url),p=u.pathname;
+  if(p==='/kam-20261026.js'){
+   const asset=await env.ASSETS.fetch(req),text=await asset.text(),h=new Headers(asset.headers);
+   h.set('content-type','application/javascript; charset=utf-8');h.set('cache-control','no-store, max-age=0');
+   return new Response(text+'\n'+kamClientPatch,{status:asset.status,headers:h});
+  }
   if(p==='/api/health'){
    if(!env.APORTES_DB)return response({ok:true,persistence:false,write:false,version:'honor-live-4-models'});
    try{
