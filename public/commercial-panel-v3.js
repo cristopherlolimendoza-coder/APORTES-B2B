@@ -35,8 +35,10 @@ function structured(row){return Array.isArray(row.modelItems)&&row.modelItems.le
 function metrics(row){
  const items=parseModelText(row),has=structured(row);
  let approved=has?items.reduce((s,x)=>s+x.unidades*x.aporteUnitario,0):nval(row.aporte);
- let wonUnits=has?items.filter(x=>x.estado==='Ganada').reduce((s,x)=>s+x.unidadesGanadas,0):nval(row.unidadesEntregadas||0);
- let cost=has?items.filter(x=>x.estado==='Ganada').reduce((s,x)=>s+x.unidadesGanadas*x.aporteUnitario,0):nval(row.aportePagado||0);
+ const inferredWonUnits=items.filter(x=>x.estado==='Ganada').reduce((s,x)=>s+x.unidadesGanadas,0);
+ const inferredCost=items.filter(x=>x.estado==='Ganada').reduce((s,x)=>s+x.unidadesGanadas*x.aporteUnitario,0);
+ let wonUnits=has?inferredWonUnits:(nval(row.unidadesEntregadas||0)||inferredWonUnits);
+ let cost=has?inferredCost:(nval(row.aportePagado||0)||inferredCost);
  let pending=has?items.filter(x=>x.estado==='En curso').reduce((s,x)=>s+x.unidades*x.aporteUnitario,0):(row.estado==='En curso'?approved:0);
  let released=0,unresolved=0;
  if(has){
@@ -54,7 +56,8 @@ function metrics(row){
    else if(items.some(x=>x.estado==='Ganada'))state='Ganada';
    else state='Perdida';
  }
- return {items,approved,wonUnits,cost,pending,released,unresolved,state,refUnits:nval(row.unidades)};
+ const pendingTotal=pending+unresolved;
+ return {items,approved,wonUnits,cost,pending,pendingTotal,released,unresolved,state,refUnits:nval(row.unidades)};
 }
 function ensureCommercialFields(){
  const probs={'Identificada':.10,'Propuesta':.30,'Negociación':.60,'Por cerrar':.85,'Ganada':1,'Perdida':0};
@@ -68,7 +71,7 @@ function ensureCommercialFields(){
 function currentRows(){try{return typeof window.F==='function'?window.F():window.DATA||[]}catch{return window.DATA||[]}}
 function agg(rows){
  const a={ops:rows.length,clients:new Set(),won:0,lost:0,open:0,refUnits:0,wonUnits:0,approved:0,cost:0,pending:0,released:0,unresolved:0};
- rows.forEach(r=>{a.clients.add(r.ruc||r.cliente);const m=metrics(r);a.refUnits+=m.refUnits;a.wonUnits+=m.wonUnits;a.approved+=m.approved;a.cost+=m.cost;a.pending+=m.pending;a.released+=m.released;a.unresolved+=m.unresolved;if(m.state==='Ganada')a.won++;else if(m.state==='Perdida')a.lost++;else a.open++;});
+ rows.forEach(r=>{a.clients.add(r.ruc||r.cliente);const m=metrics(r);a.refUnits+=m.refUnits;a.wonUnits+=m.wonUnits;a.approved+=m.approved;a.cost+=m.cost;a.pending+=m.pendingTotal;a.released+=m.released;a.unresolved+=m.unresolved;if(m.state==='Ganada')a.won++;else if(m.state==='Perdida')a.lost++;else a.open++;});
  a.closed=a.won+a.lost;a.winRate=a.closed?a.won/a.closed*100:0;return a;
 }
 function kpi(label,value,sub,cls=''){return '<div class="cv3-kpi '+cls+'"><span>'+esc(label)+'</span><b>'+value+'</b><small>'+esc(sub||'')+'</small></div>'}
@@ -126,10 +129,10 @@ async function saveEditor(){
 function filterLabel(){const p=[];const ids=[['fm','Mes'],['fc','Canal'],['fej','Ejecutivo'],['fe','Estado'],['fz','Cierre'],['fy','Año']];ids.forEach(([id,l])=>{const e=$(id);if(e?.value)p.push(l+': '+(e.options?.[e.selectedIndex]?.text||e.value))});if($('fq')?.value)p.push('Buscar: '+$('fq').value);return p.length?p.join(' · '):'Todos los datos';}
 function render(){
  if(!$('cv3-panel'))return;ensureCommercialFields();const rows=currentRows(),a=agg(rows);$('cv3FilterText').innerHTML='Filtro activo: <span class="cv3-filtername">'+esc(filterLabel())+'</span> · '+num(a.clients.size)+' cliente(s)';
- $('cv3Kpis').innerHTML=kpi('Ventas ganadas',num(a.won),a.winRate.toFixed(1)+'% win rate','good')+kpi('Perdidas',num(a.lost),num(a.open)+' en curso','bad')+kpi('Unidades ganadas',num(a.wonUnits),'Confirmadas por modelo','good')+kpi('Aporte aprobado',money(a.approved),'Potencial máximo')+kpi('Costo confirmado',money(a.cost),'Ganadas × aporte/eq','good')+kpi('Pendiente',money(a.pending),'Modelos en curso','open')+kpi('Liberado',money(a.released),'Perdidos, descartados o saldo')+kpi('Oportunidades',num(a.ops),num(a.refUnits)+' unid. ref.');
+ $('cv3Kpis').innerHTML=kpi('Ventas ganadas',num(a.won),a.winRate.toFixed(1)+'% win rate','good')+kpi('Perdidas',num(a.lost),num(a.open)+' en curso','bad')+kpi('Unidades ganadas',num(a.wonUnits),'Confirmadas por modelo','good')+kpi('Aporte aprobado',money(a.approved),'Potencial máximo')+kpi('Costo confirmado',money(a.cost),'Ganadas × aporte/eq','good')+kpi('Pendiente / por definir',money(a.pending),'En curso + históricos por resolver','open')+kpi('Liberado',money(a.released),'Perdidos, descartados o saldo')+kpi('Oportunidades',num(a.ops),num(a.refUnits)+' unid. ref.');
  const total=Math.max(1,a.ops),g=a.won/total*360,p=a.lost/total*360;$('cv3Donut').innerHTML='<div class="cv3-donut" style="background:conic-gradient('+COLORS.Ganada+' 0 '+g+'deg,'+COLORS.Perdida+' '+g+'deg '+(g+p)+'deg,'+COLORS['En curso']+' '+(g+p)+'deg 360deg)"><div class="cv3-donut-label"><div>'+num(a.ops)+'<div style="font-size:10px;color:#74839a">oportunidades</div></div></div></div><div class="cv3-legend"><span><i style="background:'+COLORS.Ganada+'"></i>Ganadas '+a.won+'</span><span><i style="background:'+COLORS.Perdida+'"></i>Perdidas '+a.lost+'</span><span><i style="background:'+COLORS['En curso']+'"></i>En curso '+a.open+'</span></div>';
  $('cv3Months').innerHTML=MONTHS.filter(m=>rows.some(r=>r.mesOrigen===m)).map(m=>{const rr=rows.filter(r=>r.mesOrigen===m),aa=agg(rr),t=Math.max(1,aa.ops);return '<div class="cv3-month"><b>'+(MONTH_NAMES[m]||m)+'</b><div class="cv3-stack" title="G '+aa.won+' · P '+aa.lost+' · EC '+aa.open+'"><i style="width:'+(aa.won/t*100)+'%;background:'+COLORS.Ganada+'"></i><i style="width:'+(aa.lost/t*100)+'%;background:'+COLORS.Perdida+'"></i><i style="width:'+(aa.open/t*100)+'%;background:'+COLORS['En curso']+'"></i></div><div class="cv3-month-metric"><b>'+num(aa.wonUnits)+' u</b> · '+money(aa.cost)+' costo · '+money(aa.pending)+' pend.</div></div>'}).join('')||'<div class="cv3-note">Sin datos para el filtro actual.</div>';
- $('cv3Rows').innerHTML=rows.map(r=>{const m=metrics(r),items=m.items,modelHtml=items.map(x=>'<div class="cv3-model"><strong title="'+esc(x.modelo)+'">'+esc(x.modelo)+'</strong><span>'+num(x.unidades)+' u</span><span>'+money2(x.aporteUnitario)+'/eq</span><span style="color:'+(COLORS[x.estado]||'#617087')+';font-weight:900">'+esc(x.estado)+'</span></div>').join('')||'<span class="mut">Sin modelos</span>';return '<tr><td>'+statusBadge(m.state)+'</td><td><b>'+esc(r.cliente)+'</b><div class="mut">'+esc(r.ejecutivo||'Sin KAM')+' · '+esc(r.ruc||'')+'</div></td><td>'+esc(MONTH_NAMES[r.mesOrigen]||r.mesOrigen||'')+'</td><td><div class="cv3-models">'+modelHtml+'</div>'+(m.unresolved?'<div class="warn" style="margin-top:5px">'+money(m.unresolved)+' sin definir por modelo</div>':'')+'</td><td>'+num(m.refUnits)+'</td><td><b>'+num(m.wonUnits)+'</b></td><td>'+money(m.approved)+'</td><td><b>'+money(m.cost)+'</b></td><td>'+money(m.pending)+'</td><td>'+money(m.released)+'</td><td><button class="cv3-btn" data-cv3-edit="'+encodeURIComponent(String(r.id))+'">Editar</button></td></tr>'}).join('')||'<tr><td colspan="11" class="mut">Sin cuentas para el filtro actual.</td></tr>';
+ $('cv3Rows').innerHTML=rows.map(r=>{const m=metrics(r),items=m.items,modelHtml=items.map(x=>'<div class="cv3-model"><strong title="'+esc(x.modelo)+'">'+esc(x.modelo)+'</strong><span>'+num(x.unidades)+' u</span><span>'+money2(x.aporteUnitario)+'/eq</span><span style="color:'+(COLORS[x.estado]||'#617087')+';font-weight:900">'+esc(x.estado)+'</span></div>').join('')||'<span class="mut">Sin modelos</span>';return '<tr><td>'+statusBadge(m.state)+'</td><td><b>'+esc(r.cliente)+'</b><div class="mut">'+esc(r.ejecutivo||'Sin KAM')+' · '+esc(r.ruc||'')+'</div></td><td>'+esc(MONTH_NAMES[r.mesOrigen]||r.mesOrigen||'')+'</td><td><div class="cv3-models">'+modelHtml+'</div>'+(m.unresolved?'<div class="warn" style="margin-top:5px">'+money(m.unresolved)+' sin definir por modelo</div>':'')+'</td><td>'+num(m.refUnits)+'</td><td><b>'+num(m.wonUnits)+'</b></td><td>'+money(m.approved)+'</td><td><b>'+money(m.cost)+'</b></td><td>'+money(m.pendingTotal)+'</td><td>'+money(m.released)+'</td><td><button class="cv3-btn" data-cv3-edit="'+encodeURIComponent(String(r.id))+'">Editar</button></td></tr>'}).join('')||'<tr><td colspan="11" class="mut">Sin cuentas para el filtro actual.</td></tr>';
  document.querySelectorAll('[data-cv3-edit]').forEach(b=>b.onclick=()=>openEditor(decodeURIComponent(b.dataset.cv3Edit),false));
  overrideFilterTotals(rows,a);
 }
