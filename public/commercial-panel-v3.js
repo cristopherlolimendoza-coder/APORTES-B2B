@@ -84,6 +84,7 @@ function buildStyles(){
 function addTabs(){
  const tabs=document.querySelector('.tabs');if(!tabs)return;const list=[['res','Resumen'],['cue','Cuentas'],['pip','Pipeline'],['fun','Funnel'],['for','Forecast'],['per','Performance'],['apo','Aportes']];
  list.forEach(([id,label])=>{if(!$(id)||tabs.querySelector('[data-v="'+id+'"]'))return;const b=document.createElement('button');b.className='tab';b.dataset.v=id;b.textContent=label;tabs.appendChild(b)});
+ list.forEach(([id])=>{const b=tabs.querySelector('[data-v="'+id+'"]');if(b)tabs.appendChild(b)});
  tabs.querySelectorAll('.tab').forEach(b=>{b.onclick=()=>{document.querySelectorAll('.tab,.v').forEach(x=>x.classList.remove('on'));b.classList.add('on');$(b.dataset.v)?.classList.add('on');if(b.dataset.v==='cue')render();}});
 }
 function buildPanel(){
