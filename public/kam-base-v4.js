@@ -111,10 +111,57 @@
   auditAndNormalize(true);
 })();
 
+/*
+ * Compatibilidad entre el formato visual ago-26 y la validación histórica ago-2026.
+ * La API recibe cuatro dígitos, mientras que la aplicación sigue trabajando con dos.
+ */
+(()=>{
+  if(window.__honorMonthApiCompat)return;
+  window.__honorMonthApiCompat=true;
+  const nativeFetch=window.fetch.bind(window);
+  const toApiMonth=value=>/^[a-z]{3}-\d{2}$/.test(String(value||''))
+    ? String(value).slice(0,4)+'20'+String(value).slice(-2)
+    : value;
+  const toUiMonth=value=>/^[a-z]{3}-20\d{2}$/.test(String(value||''))
+    ? String(value).slice(0,4)+String(value).slice(-2)
+    : value;
+  const normalizePayload=data=>{
+    if(!data||typeof data!=='object')return data;
+    if(Array.isArray(data.entries))data.entries.forEach(entry=>{
+      if(entry?.patch?.mesOrigen)entry.patch.mesOrigen=toUiMonth(entry.patch.mesOrigen);
+    });
+    if(data.entry?.patch?.mesOrigen)data.entry.patch.mesOrigen=toUiMonth(data.entry.patch.mesOrigen);
+    return data;
+  };
+  window.fetch=async function(input,init){
+    let requestInput=input,requestInit=init;
+    const rawUrl=typeof input==='string'?input:(input?.url||'');
+    let path='';
+    try{path=new URL(rawUrl,location.href).pathname}catch{}
+    if(path==='/api/save'&&requestInit?.body){
+      try{
+        const body=JSON.parse(requestInit.body);
+        if(body?.patch?.mesOrigen)body.patch.mesOrigen=toApiMonth(body.patch.mesOrigen);
+        requestInit={...requestInit,body:JSON.stringify(body)};
+      }catch{}
+    }
+    const response=await nativeFetch(requestInput,requestInit);
+    if(!['/api/data','/api/save','/api/history'].includes(path))return response;
+    const type=response.headers.get('content-type')||'';
+    if(!type.includes('application/json'))return response;
+    try{
+      const data=normalizePayload(await response.clone().json());
+      const headers=new Headers(response.headers);
+      headers.delete('content-length');headers.delete('content-encoding');
+      return new Response(JSON.stringify(data),{status:response.status,statusText:response.statusText,headers});
+    }catch{return response;}
+  };
+})();
+
 (()=>{
   const load=()=>{
     if(document.querySelector('script[data-editor-close-v5]'))return;
-    const s=document.createElement('script');s.src='editor-close-v5.js?v=20261027-closure-save-2';s.dataset.editorCloseV5='1';document.body.appendChild(s);
+    const s=document.createElement('script');s.src='editor-close-v5.js?v=20261027-closure-save-3';s.dataset.editorCloseV5='1';document.body.appendChild(s);
   };
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',load,{once:true});else load();
 })();
