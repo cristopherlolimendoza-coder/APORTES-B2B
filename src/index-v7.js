@@ -1,5 +1,5 @@
-import base from './index.js';
-export { AportesDB } from './index.js';
+import base, { AportesDB } from './index-v5.js';
+export { AportesDB };
 
 const statusLoader=`
 ;(()=>{
