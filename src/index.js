@@ -133,7 +133,8 @@ export default {
  async fetch(req,env){
   const u=new URL(req.url),p=u.pathname;
   if(p==='/kam-20261026.js'){
-   const asset=await env.ASSETS.fetch(req),text=await asset.text(),h=new Headers(asset.headers);
+   const assetReq=new Request(new URL('/kam-base-v4.js',u.origin),{method:'GET'});
+   const asset=await env.ASSETS.fetch(assetReq),text=await asset.text(),h=new Headers(asset.headers);
    h.set('content-type','application/javascript; charset=utf-8');h.set('cache-control','no-store, max-age=0');
    return new Response(text+'\n'+kamClientPatch,{status:asset.status,headers:h});
   }
