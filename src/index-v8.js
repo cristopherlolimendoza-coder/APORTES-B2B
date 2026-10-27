@@ -5,11 +5,18 @@ const FOLLOW_RE=/\s*\[MES_SEGUIMIENTO:([a-z]{3}-\d{2,4})\]\s*/i;
 const activeLoader=`
 ;(()=>{
   const load=()=>{
-    if(document.querySelector('script[data-active-period-v8]'))return;
-    const s=document.createElement('script');
-    s.src='active-period-v8.js?v=20261027-active-period-1';
-    s.dataset.activePeriodV8='1';
-    document.body.appendChild(s);
+    if(!document.querySelector('script[data-active-period-v8]')){
+      const s=document.createElement('script');
+      s.src='active-period-v8.js?v=20261027-active-period-1';
+      s.dataset.activePeriodV8='1';
+      document.body.appendChild(s);
+    }
+    if(!document.querySelector('script[data-period-label-v8]')){
+      const l=document.createElement('script');
+      l.src='period-label-v8.js?v=20261027-period-label-1';
+      l.dataset.periodLabelV8='1';
+      document.body.appendChild(l);
+    }
   };
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',load,{once:true});
   else load();
