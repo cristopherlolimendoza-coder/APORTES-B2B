@@ -120,3 +120,35 @@
   if(document.readyState==='complete') loadUpgrade();
   else window.addEventListener('load',loadUpgrade,{once:true});
 })();
+
+/* Evita opciones de mes duplicadas cuando la base central termina de sincronizar. */
+(()=>{
+  function dedupeOriginMonths(){
+    const select=document.getElementById('fMonth');
+    if(!select)return;
+    const selected=select.value,seen=new Set();
+    [...select.options].forEach(option=>{
+      const key=option.value;
+      if(seen.has(key))option.remove();
+      else seen.add(key);
+    });
+    select.value=selected;
+    if(select.selectedIndex<0)select.value='';
+  }
+  function watch(){
+    const select=document.getElementById('fMonth');
+    if(!select)return setTimeout(watch,100);
+    let queued=false;
+    const observer=new MutationObserver(()=>{
+      if(queued)return;
+      queued=true;
+      queueMicrotask(()=>{queued=false;dedupeOriginMonths();});
+    });
+    observer.observe(select,{childList:true});
+    dedupeOriginMonths();
+    setTimeout(dedupeOriginMonths,500);
+    setTimeout(dedupeOriginMonths,1600);
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',watch,{once:true});
+  else watch();
+})();
