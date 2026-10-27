@@ -17,11 +17,11 @@ function parseModelText(row){
   id:String(x.id||('M'+(i+1))),modelo:String(x.modelo||''),unidades:nval(x.unidades),aporteUnitario:nval(x.aporteUnitario),unidadesGanadas:nval(x.unidadesGanadas),estado:MODEL_STATES.includes(x.estado)?x.estado:'En curso',nota:String(x.nota||'')
  }))}
  const raw=String(row.modelos||'').trim();if(!raw)return [];
- const parts=raw.split(/s*|s*/).filter(Boolean);
+ const parts=raw.split(/\s*\|\s*/).filter(Boolean);
  return parts.map((p,i)=>{
   const bits=p.split('·').map(x=>x.trim());
   const modelo=bits[0]||p;
-  const um=(bits[1]||'').match(/([d,.]+|?)s*u/i),am=(bits[2]||'').match(/$s*([d,.]+)/i);
+  const um=(bits[1]||'').match(/([\d,.]+|\?)\s*u/i),am=(bits[2]||'').match(/\$\s*([\d,.]+)/i);
   const unidades=um&&um[1]!=='?'?nval(um[1]):0,aporteUnitario=am?nval(am[1]):0;
   let estado=row.estado||'En curso',unidadesGanadas=0;
   if(parts.length>1&&row.estado==='Ganada'){estado='Sin definir';}
@@ -117,7 +117,7 @@ function showCloudAccessHint(){const input=$('cloudKey');const info=$('cloudAcce
 function formatModels(items){return items.map(x=>x.modelo+' · '+(x.unidades||'?')+' u · '+(x.aporteUnitario?('$'+Number(x.aporteUnitario).toFixed(x.aporteUnitario%1?2:0)):'Pend.')+'/eq').join(' | ')}
 async function saveEditor(){
  const isNew=$('cv3Dlg').dataset.new==='1',id=$('cv3Id').value||('WEB-'+Date.now()+'-'+Math.random().toString(36).slice(2,9)),items=editorItems();$('cv3Error').style.display='none';
- const cliente=$('cv3Cliente').value.trim(),ruc=$('cv3Ruc').value.trim();if(!cliente)return showError('Ingresa el cliente.');if(!/^d{11}$/.test(ruc))return showError('El RUC debe tener 11 dígitos.');if(!items.length||items.some(x=>!x.modelo))return showError('Completa el nombre de todos los modelos.');if(items.some(x=>x.estado==='Sin definir'))return showError('Antes de guardar, define cada modelo como En curso, Ganada, Perdida o Descartado.');if(items.some(x=>x.unidadesGanadas>x.unidades&&x.unidades>0))return showError('Las unidades ganadas no pueden superar las propuestas.');
+ const cliente=$('cv3Cliente').value.trim(),ruc=$('cv3Ruc').value.trim();if(!cliente)return showError('Ingresa el cliente.');if(!/^\d{11}$/.test(ruc))return showError('El RUC debe tener 11 dígitos.');if(!items.length||items.some(x=>!x.modelo))return showError('Completa el nombre de todos los modelos.');if(items.some(x=>x.estado==='Sin definir'))return showError('Antes de guardar, define cada modelo como En curso, Ganada, Perdida o Descartado.');if(items.some(x=>x.unidadesGanadas>x.unidades&&x.unidades>0))return showError('Las unidades ganadas no pueden superar las propuestas.');
  const anyOpen=items.some(x=>x.estado==='En curso'),anyWon=items.some(x=>x.estado==='Ganada');let estado=anyOpen?'En curso':(anyWon?'Ganada':'Perdida');let mesCierre=$('cv3MesCierre').value,anioCierre=mesCierre?Number($('cv3Anio').value):null;if(estado!=='En curso'&&!mesCierre)return showError('La cuenta ya está cerrada. Selecciona mes y año de cierre.');if(estado==='En curso'){mesCierre='';anioCierre=null;}
  const approved=items.reduce((s,x)=>s+x.unidades*x.aporteUnitario,0),wonUnits=items.filter(x=>x.estado==='Ganada').reduce((s,x)=>s+x.unidadesGanadas,0),cost=items.filter(x=>x.estado==='Ganada').reduce((s,x)=>s+x.unidadesGanadas*x.aporteUnitario,0),base=(window.DATA||[]).find(x=>String(x.id)===String(id))||{};
  const row={...base,id,cliente,ruc,canal:$('cv3Canal').value,ejecutivo:$('cv3Ejecutivo').value.trim(),mesOrigen:$('cv3MesOrigen').value,unidades:nval($('cv3RefUnits').value)||Math.max(0,...items.map(x=>x.unidades)),modelos:formatModels(items),aporte:approved,estado,mesCierre,anioCierre,cierre:mesCierre?(mesCierre+' '+anioCierre):'',comentario:$('cv3Comentario').value.trim(),unidadesEntregadas:wonUnits,aportePagado:cost,modelItems:items};
