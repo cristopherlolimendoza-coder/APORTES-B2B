@@ -110,3 +110,11 @@
   window.HONOR_NORMALIZE_ACCOUNTS = auditAndNormalize;
   auditAndNormalize(true);
 })();
+
+(()=>{
+  const load=()=>{
+    if(document.querySelector('script[data-editor-close-v5]'))return;
+    const s=document.createElement('script');s.src='editor-close-v5.js?v=20261027-closure-save-2';s.dataset.editorCloseV5='1';document.body.appendChild(s);
+  };
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',load,{once:true});else load();
+})();
