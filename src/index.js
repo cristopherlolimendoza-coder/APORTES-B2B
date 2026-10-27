@@ -29,6 +29,7 @@ const kamClientPatch=`
     ['angela chonyen','Ángela Chonyen']
   ]);
   const canonical=v=>preferred.get(norm(v))||String(v??'').trim();
+  const safe=v=>String(v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
   let cleaning=false;
   function applyNames(){
     if(typeof DATA==='undefined'||!Array.isArray(DATA))return;
@@ -42,17 +43,21 @@ const kamClientPatch=`
     try{
       applyNames();
       const selectedMonth=month.value;
-      month.innerHTML='<option value="">Todos</option>'+monthOrder.filter(m=>DATA.some(r=>r.mesOrigen===m)).map(m=>'<option value="'+m+'">'+monthNames[m]+'</option>').join('');
+      const monthHtml='<option value="">Todos</option>'+monthOrder.filter(m=>DATA.some(r=>r.mesOrigen===m)).map(m=>'<option value="'+m+'">'+monthNames[m]+'</option>').join('');
+      if(month.innerHTML!==monthHtml)month.innerHTML=monthHtml;
       month.value=selectedMonth;if(month.selectedIndex<0)month.value='';
       const selectedExec=canonical(exec.value),names=[...new Set(DATA.map(r=>canonical(r.ejecutivo)).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
-      exec.innerHTML='<option value="">Todos</option>'+names.map(n=>'<option value="'+n.replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'">'+n.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</option>').join('');
+      const execHtml='<option value="">Todos</option>'+names.map(n=>'<option value="'+safe(n)+'">'+safe(n)+'</option>').join('');
+      if(exec.innerHTML!==execHtml)exec.innerHTML=execHtml;
       exec.value=selectedExec;if(exec.selectedIndex<0)exec.value='';
     }finally{cleaning=false;}
   }
   function install(){
     const month=document.getElementById('fMonth'),exec=document.getElementById('fExec');
     if(!month||!exec)return setTimeout(install,100);
-    const observer=new MutationObserver(()=>queueMicrotask(cleanFilters));
+    let queued=false;
+    const schedule=()=>{if(queued)return;queued=true;setTimeout(()=>{queued=false;cleanFilters();},0);};
+    const observer=new MutationObserver(schedule);
     observer.observe(month,{childList:true});observer.observe(exec,{childList:true});
     cleanFilters();setTimeout(cleanFilters,500);setTimeout(cleanFilters,1800);
   }
