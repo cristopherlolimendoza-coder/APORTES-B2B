@@ -165,3 +165,11 @@
   };
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',load,{once:true});else load();
 })();
+
+(()=>{
+  const load=()=>{
+    if(document.querySelector('script[data-filter-persistence-v6]'))return;
+    const s=document.createElement('script');s.src='filter-persistence-v6.js?v=20261027-filters-1';s.dataset.filterPersistenceV6='1';document.body.appendChild(s);
+  };
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',load,{once:true});else load();
+})();
