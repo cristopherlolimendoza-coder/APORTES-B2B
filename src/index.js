@@ -60,7 +60,15 @@ export class AportesDB{
 export default {
  async fetch(req,env){
   const u=new URL(req.url),p=u.pathname;
-  if(p==='/api/health')return response({ok:true,persistence:!!env.APORTES_DB,version:'honor-live-2'});
+  if(p==='/api/health'){
+   if(!env.APORTES_DB)return response({ok:true,persistence:false,write:false,version:'honor-live-3'});
+   try{
+    const obj=env.APORTES_DB.get(env.APORTES_DB.idFromName('honor-b2b-master'));
+    const probe=await obj.fetch(new Request(new URL('/test-write',u.origin),{method:'POST'}));
+    const j=await probe.json();
+    return response({ok:true,persistence:true,write:!!j.ok,version:'honor-live-3'});
+   }catch(e){return response({ok:true,persistence:true,write:false,version:'honor-live-3'});}
+  }
   if(p.startsWith('/api/')){
    if(!env.APORTES_DB)return response({ok:false,error:'Almacenamiento no disponible'},503);
    if(p==='/api/auth'&&req.method==='POST'){const ok=await permitted(req);return response({ok},ok?200:401);}
