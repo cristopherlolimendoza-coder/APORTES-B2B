@@ -51,6 +51,12 @@
   addAliases('Mónica Teresa Castro Ríos', [
     'Mónica Teresa Castro Ríos','Monica Teresa Castro Rios','Monica Teresa Castro','Mónica Castro','Monica Castro'
   ]);
+  addAliases('María Fernanda Zamora Wong', ['María Fernanda Zamora Wong','Maria Fernanda Zamora Wong','María Fernanda Zamora Vong']);
+  addAliases('Violeta Aguilar Regalado', ['Violeta Aguilar Regalado','Violeta Aguilar']);
+  addAliases('José Antonio Garay Pfuyo', ['José Antonio Garay Pfuyo','Jose Antonio Garay Pfuyo','Jose Antonio Garay']);
+  addAliases('Álvaro Gomezdecordova', ['Álvaro Gomezdecordova','Alvaro Gomezdecordova']);
+  addAliases('Soraya Farra Muñoz Tremolada', ['Soraya Farra Muñoz Tremolada','Soraya Fara Muñoz Tremolada']);
+  addAliases('Ángela Chonyen', ['Ángela Chonyen','Angela Chonyen','Chonyen']);
 
   function auditAndNormalize(apply=false){
     let accountUpdates = 0, aliasUpdates = 0;
