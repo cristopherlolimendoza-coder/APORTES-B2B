@@ -113,7 +113,7 @@
   function loadUpgrade(){
     if(document.querySelector('script[data-honor-upgrade]')) return;
     const script=document.createElement('script');
-    script.src='upgrade-20261026.js?v=20261026-accounts-edit-v2';
+    script.src='upgrade-20261026.js?v=20261027-simple-responsive-v4';
     script.dataset.honorUpgrade='1';
     document.body.appendChild(script);
   }
