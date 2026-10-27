@@ -49,6 +49,7 @@ function metrics(row){
    else if(x.estado==='Sin definir')unresolved+=full;
   });
  }else if(row.estado==='Perdida')released=approved;
+ else if(row.estado==='Ganada'&&items.some(x=>x.estado==='Sin definir'))unresolved=approved;
  let state=row.estado||'En curso';
  if(has){
    if(items.some(x=>x.estado==='En curso'))state='En curso';
