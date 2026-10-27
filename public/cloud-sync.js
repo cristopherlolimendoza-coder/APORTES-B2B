@@ -16,7 +16,13 @@ function msg(s,fail){let el=document.getElementById('saveMsg');if(el){el.textCon
  const dlg=document.getElementById('editDlg'),error=document.getElementById('editError');
  if(dlg?.open&&error){error.style.display='block';error.textContent=s;error.style.background=fail?'#fff2f0':'#eaf7ed';error.style.color=fail?'#ad3026':'#247a3c';}
 }
-function patch(r){return {cliente:String(r.cliente||''),ruc:String(r.ruc||''),canal:r.canal||'Empresas',ejecutivo:String(r.ejecutivo||''),modelos:String(r.modelos||''),unidades:Number(r.unidades)||0,aporte:Number(r.aporte)||0,estado:r.estado||'En curso',mesOrigen:r.mesOrigen||'oct-26',mesCierre:r.mesCierre||'',anioCierre:r.anioCierre||null,comentario:String(r.comentario||'')};}
+function patch(r){
+ const out={cliente:String(r.cliente||''),ruc:String(r.ruc||''),canal:r.canal||'Empresas',ejecutivo:String(r.ejecutivo||''),modelos:String(r.modelos||''),unidades:Number(r.unidades)||0,aporte:Number(r.aporte)||0,estado:r.estado||'En curso',mesOrigen:r.mesOrigen||'oct-26',mesCierre:r.mesCierre||'',anioCierre:r.anioCierre||null,comentario:String(r.comentario||'')};
+ if(r.unidadesEntregadas!==undefined&&r.unidadesEntregadas!==null)out.unidadesEntregadas=Number(r.unidadesEntregadas)||0;
+ if(r.aportePagado!==undefined&&r.aportePagado!==null)out.aportePagado=Number(r.aportePagado)||0;
+ if(Array.isArray(r.modelItems))out.modelItems=r.modelItems.map(x=>({id:String(x.id||''),modelo:String(x.modelo||''),unidades:Number(x.unidades)||0,aporteUnitario:Number(x.aporteUnitario)||0,unidadesGanadas:Number(x.unidadesGanadas)||0,estado:String(x.estado||'En curso'),nota:String(x.nota||'')}));
+ return out;
+}
 function canEdit(){if(!secret){msg('Para modificar cuentas, primero ingresa tu clave y pulsa Activar edición',true);document.getElementById('cloudKey').scrollIntoView({behavior:'smooth',block:'center'});document.getElementById('cloudKey').focus();return false}if(!ready){msg('Esperando a la base central',true);return false}return true;}
 function lockControls(){
  let ok=!!secret&&ready;
@@ -122,5 +128,9 @@ document.getElementById('cloudLogin').onclick=login;
 document.getElementById('cloudLogout').onclick=()=>{secret='';sessionStorage.removeItem(SESSION_KEY);lockControls();msg('Modo consulta')};
 document.getElementById('cloudImport').onclick=migrate;
 document.getElementById('cloudKey').addEventListener('keydown',e=>{if(e.key==='Enter')login()});
+window.HONOR_CLOUD_SAVE=submit;
+window.HONOR_CLOUD_CAN_EDIT=()=>!!secret&&ready;
+window.HONOR_CLOUD_READY=()=>ready;
+window.HONOR_CLOUD_REFRESH=()=>start();
 lockControls();start();
 })();
