@@ -40,19 +40,20 @@ function rowMetric(r){
  const st=state(r.estado),approved=nval(r.aporte),refUnits=nval(r.unidades);
  if(st==='Ganada'){
    const units=nval(r.unidadesEntregadas)||refUnits;
-   const executed=nval(r.aportePagado)||approved;
-   return{state:st,units,approved,executed,pending:0,released:Math.max(0,approved-executed),stateAmount:executed};
+   const rawExecuted=nval(r.aportePagado)||approved;
+   const executed=approved>0?Math.min(rawExecuted,approved):0;
+   return{state:st,units,approved,executed,pending:0,released:Math.max(0,approved-executed),stateAmount:executed,missingAmount:approved<=0};
  }
- if(st==='Perdida')return{state:st,units:refUnits,approved,executed:0,pending:0,released:approved,stateAmount:approved};
- return{state:st,units:refUnits,approved,executed:0,pending:approved,released:0,stateAmount:approved};
+ if(st==='Perdida')return{state:st,units:refUnits,approved,executed:0,pending:0,released:approved,stateAmount:approved,missingAmount:approved<=0};
+ return{state:st,units:refUnits,approved,executed:0,pending:approved,released:0,stateAmount:approved,missingAmount:approved<=0};
 }
 function currentRows(){
  const month=$('fMonth')?.value||'',channel=$('fChannel')?.value||'',exec=$('fExec')?.value||'',st=$('fState')?.value||'',q=($('fSearch')?.value||'').trim().toLowerCase();
  return DATA_ROWS().filter(r=>(!month||r.mesOrigen===month)&&(!channel||r.canal===channel)&&(!exec||r.ejecutivo===exec)&&(!st||state(r.estado)===state(st))&&(!q||[r.cliente,r.ruc,r.ejecutivo,r.modelos].join(' ').toLowerCase().includes(q)));
 }
 function aggregate(rows){
- const a={clients:new Set(),ops:rows.length,won:0,lost:0,open:0,units:0,approved:0,executed:0,pending:0,released:0,stateAmount:0};
- rows.forEach(r=>{const m=rowMetric(r);a.clients.add(r.ruc||r.cliente);a.units+=m.units;a.approved+=m.approved;a.executed+=m.executed;a.pending+=m.pending;a.released+=m.released;a.stateAmount+=m.stateAmount;if(m.state==='Ganada')a.won++;else if(m.state==='Perdida')a.lost++;else a.open++;});return a;
+ const a={clients:new Set(),ops:rows.length,won:0,lost:0,open:0,units:0,approved:0,executed:0,pending:0,released:0,stateAmount:0,missingAmount:0};
+ rows.forEach(r=>{const m=rowMetric(r);a.clients.add(r.ruc||r.cliente);a.units+=m.units;a.approved+=m.approved;a.executed+=m.executed;a.pending+=m.pending;a.released+=m.released;a.stateAmount+=m.stateAmount;if(m.missingAmount)a.missingAmount++;if(m.state==='Ganada')a.won++;else if(m.state==='Perdida')a.lost++;else a.open++;});return a;
 }
 function kpi(t,v,s,c=''){return'<div class="kpi '+c+'"><span>'+esc(t)+'</span><b>'+v+'</b><small>'+esc(s||'')+'</small></div>'}
 
@@ -69,16 +70,17 @@ function patchKpis(){
  const filtered=!!$('fState')?.value;
  const unitTitle=filtered?(filter==='Ganada'?'Unidades ganadas':filter==='Perdida'?'Unidades perdidas':'Unidades en proceso'):'Unidades del estado';
  const unitSub=filtered?'Suma del estado seleccionado':'Ganadas + perdidas + en proceso';
+ const missing=a.missingAmount?(' · '+a.missingAmount+' sin aporte definido'):'';
  const html=kpi('Clientes',num(a.clients.size),'Únicos por RUC')+
    kpi('Oportunidades',num(a.ops),'Dentro del filtro')+
    kpi('Resultado','G '+a.won+' · P '+a.lost,'EP '+a.open,a.open?'open':'good')+
    kpi(unitTitle,num(a.units),unitSub,filter==='Ganada'?'good':filter==='Perdida'?'bad':'open')+
-   kpi('Aporte aprobado',money(a.approved),'Total del filtro')+
+   kpi('Aporte aprobado',money(a.approved),'Total del filtro'+missing)+
    kpi('Ganado / ejecutado',money(a.executed),'Cuentas ganadas','good')+
    kpi('En proceso',money(a.pending),'Cuentas abiertas','open')+
    kpi('Perdido / liberado',money(a.released),'Cuentas perdidas o saldo','bad');
  ['resKpis','accountKpis'].forEach(id=>{const el=$(id);if(el&&el.innerHTML!==html)el.innerHTML=html;});
- const fund=$('fundKpis');if(fund){const f=kpi('Aporte aprobado',money(a.approved),'Total del filtro')+kpi('Ganado / ejecutado',money(a.executed),'Ganadas','good')+kpi('En proceso',money(a.pending),'Abiertas','open')+kpi('Perdido / liberado',money(a.released),'Perdidas o saldo','bad');if(fund.innerHTML!==f)fund.innerHTML=f;}
+ const fund=$('fundKpis');if(fund){const f=kpi('Aporte aprobado',money(a.approved),'Total del filtro'+missing)+kpi('Ganado / ejecutado',money(a.executed),'Ganadas','good')+kpi('En proceso',money(a.pending),'Abiertas','open')+kpi('Perdido / liberado',money(a.released),'Perdidas o saldo','bad');if(fund.innerHTML!==f)fund.innerHTML=f;}
  const donut=$('fundDonut');if(donut){const total=Math.max(1,a.approved),g=a.executed/total*360,p=a.pending/total*360;const d='<div class="donut" style="background:conic-gradient(var(--good) 0 '+g+'deg,var(--open) '+g+'deg '+(g+p)+'deg,var(--bad) '+(g+p)+'deg 360deg)"><div class="donut-center"><div>'+money(a.approved)+'<div class="mut">aprobado</div></div></div></div><div class="legend"><span><i style="background:var(--good)"></i>Ganado '+money(a.executed)+'</span><span><i style="background:var(--open)"></i>En proceso '+money(a.pending)+'</span><span><i style="background:var(--bad)"></i>Perdido '+money(a.released)+'</span></div>';if(donut.innerHTML!==d)donut.innerHTML=d;}
 }
 
@@ -99,11 +101,11 @@ function patchRows(){
    if(cells[0])cells[0].innerHTML='<span class="badge '+badgeClass(m.state)+'">'+label(m.state)+'</span>';
    patchModelLabels(cells[3],r);
    if(cells[4])cells[4].innerHTML='<b>'+num(m.units)+'</b><div class="mut">'+(m.state==='Ganada'?'ganadas':m.state==='Perdida'?'perdidas':'en proceso')+'</div>';
-   if(cells[5])cells[5].innerHTML='<div class="moneycell"><span>Aprobado <b>'+money(m.approved)+'</b></span><span>Ganado <b>'+money(m.executed)+'</b></span><span>En proceso <b>'+money(m.pending)+'</b></span><span>Perdido <b>'+money(m.released)+'</b></span></div>';
+   if(cells[5])cells[5].innerHTML='<div class="moneycell"><span>Aprobado <b>'+money(m.approved)+'</b></span><span>Ganado <b>'+money(m.executed)+'</b></span><span>En proceso <b>'+money(m.pending)+'</b></span><span>Perdido <b>'+money(m.released)+'</b></span>'+(m.missingAmount?'<span class="mut">Sin aporte definido</span>':'')+'</div>';
  });
  document.querySelectorAll('#accountCards [data-edit]').forEach(btn=>{
    const id=decodeURIComponent(btn.dataset.edit||''),r=rowsById.get(id);if(!r)return;const m=rowMetric(r),card=btn.closest('.account-card');if(!card)return;const badge=card.querySelector('.badge');if(badge){badge.className='badge '+badgeClass(m.state);badge.textContent=label(m.state);}patchModelLabels(card,r);
-   const grid=card.querySelector('.mini-grid');if(grid)grid.innerHTML='<div class="mini"><span>Unidades</span><b>'+num(m.units)+'</b></div><div class="mini"><span>Ganado</span><b>'+money(m.executed)+'</b></div><div class="mini"><span>En proceso</span><b>'+money(m.pending)+'</b></div><div class="mini"><span>Perdido</span><b>'+money(m.released)+'</b></div>';
+   const grid=card.querySelector('.mini-grid');if(grid)grid.innerHTML='<div class="mini"><span>Unidades</span><b>'+num(m.units)+'</b></div><div class="mini"><span>Ganado</span><b>'+money(m.executed)+'</b></div><div class="mini"><span>En proceso</span><b>'+money(m.pending)+'</b></div><div class="mini"><span>Perdido</span><b>'+money(m.released)+'</b></div>'+(m.missingAmount?'<div class="mini"><span>Dato</span><b>Sin aporte</b></div>':'');
  });
 }
 
