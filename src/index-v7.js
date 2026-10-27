@@ -6,7 +6,7 @@ const statusLoader=`
   const load=()=>{
     if(document.querySelector('script[data-status-totals-v7]'))return;
     const s=document.createElement('script');
-    s.src='status-totals-v7.js?v=20261027-status-totals-1';
+    s.src='status-totals-v7.js?v=20261027-status-totals-2';
     s.dataset.statusTotalsV7='1';
     document.body.appendChild(s);
   };
