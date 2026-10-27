@@ -6,6 +6,21 @@ const headers={'content-type':'application/json; charset=utf-8','cache-control':
 function response(x,s=200){return new Response(JSON.stringify(x),{status:s,headers});}
 function str(v,n=500){return typeof v==='string'?v.trim().slice(0,n):'';}
 function numeric(v,max=100000000,integer=false){let n=Number(v);if(!Number.isFinite(n)||n<0||n>max||(integer&&!Number.isInteger(n)))throw Error('Valor numérico inválido');return n;}
+function cleanModelItems(v){
+ if(!Array.isArray(v)||v.length>30)throw Error('Modelos inválidos');
+ const allowed=['Sin definir','En curso','Ganada','Perdida','Descartado'];
+ return v.map((x,i)=>{
+  if(!x||typeof x!=='object'||Array.isArray(x))throw Error('Modelo inválido');
+  const modelo=str(x.modelo,180);if(!modelo)throw Error('Falta modelo');
+  const unidades=numeric(x.unidades??0,1000000,true);
+  const aporteUnitario=numeric(x.aporteUnitario??0,1000000,false);
+  let unidadesGanadas=numeric(x.unidadesGanadas??0,1000000,true);
+  const estado=str(x.estado,30)||'En curso';if(!allowed.includes(estado))throw Error('Estado de modelo inválido');
+  if(estado!=='Ganada')unidadesGanadas=0;
+  if(unidades>0&&unidadesGanadas>unidades)throw Error('Unidades ganadas mayores a propuestas');
+  return {id:str(x.id,80)||('M'+(i+1)),modelo,unidades,aporteUnitario,unidadesGanadas,estado,nota:str(x.nota,500)};
+ });
+}
 function clean(raw,isNew){
  if(!raw||typeof raw!=='object'||Array.isArray(raw))throw Error('Datos inválidos');
  let out={};const ss={cliente:180,ruc:11,ejecutivo:120,modelos:1500,comentario:1000,nota:1300};
@@ -17,6 +32,7 @@ function clean(raw,isNew){
  if('mesCierre'in raw){if(raw.mesCierre&&!months.includes(raw.mesCierre))throw Error('Mes cierre inválido');out.mesCierre=raw.mesCierre||'';}
  if('anioCierre'in raw){let n=raw.anioCierre;out.anioCierre=n===null||n===''?null:numeric(n,2040,true);if(out.anioCierre!==null&&out.anioCierre<2020)throw Error('Año inválido');}
  for(let k of ['unidades','aporte','unidadesEntregadas','aportePagado'])if(k in raw){out[k]=raw[k]===null||raw[k]===''&&k!=='unidades'&&k!=='aporte'?null:numeric(raw[k],k.toLowerCase().includes('unidades')?1000000:100000000,k.toLowerCase().includes('unidades'));}
+ if('modelItems'in raw)out.modelItems=cleanModelItems(raw.modelItems);
  if(isNew)for(let k of ['cliente','ruc','canal','estado','mesOrigen','modelos','unidades','aporte'])if(!(k in out)||out[k]===null||out[k]==='')throw Error('Falta '+k);
  if(!Object.keys(out).length)throw Error('Nada para guardar');
  if(out.estado==='En curso'){out.mesCierre='';out.anioCierre=null;out.cierre='';}
@@ -61,12 +77,12 @@ export default {
  async fetch(req,env){
   const u=new URL(req.url),p=u.pathname;
   if(p==='/api/health'){
-   if(!env.APORTES_DB)return response({ok:true,persistence:false,write:false,version:'honor-live-3'});
+   if(!env.APORTES_DB)return response({ok:true,persistence:false,write:false,version:'honor-live-4-models'});
    try{
     const obj=env.APORTES_DB.get(env.APORTES_DB.idFromName('honor-b2b-master'));
     const probe=await obj.fetch(new Request(new URL('/test-write',u.origin),{method:'POST'}));
     const j=await probe.json();
-    return response({ok:true,persistence:true,write:!!j.ok,version:'honor-live-3'});
+    return response({ok:true,persistence:true,write:!!j.ok,version:'honor-live-4-models'});
    }catch(e){return response({ok:true,persistence:true,write:false,version:'honor-live-3'});}
   }
   if(p.startsWith('/api/')){
