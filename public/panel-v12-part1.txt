@@ -1,0 +1,35 @@
+/* HONOR–Entel · panel profesional simple v12 */
+(()=>{
+'use strict';
+const VERSION='V20261028 · PANEL PROFESIONAL';
+const CANON='Fiorella Zoe Canales Gomez';
+const RUC_FIORELLA=new Set(['20114803228','20100318696']);
+const MONTHS=['may-26','jun-26','jul-26','ago-26','sep-26','oct-26','nov-26','dic-26'];
+const MONTH_NAME={'may-26':'Mayo','jun-26':'Junio','jul-26':'Julio','ago-26':'Agosto','sep-26':'Septiembre','oct-26':'Octubre','nov-26':'Noviembre','dic-26':'Diciembre'};
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const n=v=>{const x=Number(String(v??'').replace(/,/g,''));return Number.isFinite(x)&&x>=0?x:0};
+const num=v=>new Intl.NumberFormat('en-US',{maximumFractionDigits:0}).format(n(v));
+const money=v=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(n(v));
+const norm=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+const rows=()=>{try{return Array.isArray(DATA)?DATA:[]}catch{return[]}};
+function canonical(value,ruc=''){
+  const key=norm(value),clean=String(ruc||'').replace(/\D/g,'');
+  if(RUC_FIORELLA.has(clean)||key==='fiorella zoe canales gomez'||key==='fiorella zoe canales jean')return CANON;
+  return String(value||'').trim();
+}
+function normalizeRows(){rows().forEach(r=>{r.ejecutivo=canonical(r.ejecutivo,r.ruc)})}
+function parseModels(r){
+  if(Array.isArray(r.modelItems)&&r.modelItems.length)return r.modelItems.map((x,i)=>({id:String(x.id||i),modelo:String(x.modelo||'').trim()||'Modelo sin definir',unidades:n(x.unidades),aporteUnitario:n(x.aporteUnitario),estado:['Ganada','Perdida','Descartado','Sin definir','En curso'].includes(x.estado)?x.estado:'En curso',unidadesGanadas:n(x.unidadesGanadas)}));
+  const parts=String(r.modelos||'').split(/\s*\|\s*/).filter(Boolean);
+  return parts.map((p,i)=>{const b=p.split('·').map(x=>x.trim()),um=(b[1]||'').match(/([\d,.]+|\?)\s*u/i),am=(b[2]||'').match(/\$\s*([\d,.]+)/i),units=um&&um[1]!=='?'?n(um[1]):0,rate=am?n(am[1]):0;let state='En curso',won=0;if(r.estado==='Perdida')state='Perdida';else if(r.estado==='Ganada'&&parts.length===1){state='Ganada';won=n(r.unidadesEntregadas||r.unidades||units)}else if(r.estado==='Ganada')state='Sin definir';return{id:String(i),modelo:b[0]||p,unidades:units,aporteUnitario:rate,estado:state,unidadesGanadas:won}})
+}
+function metrics(r){
+  const items=parseModels(r),approved=n(r.aporte),wonUnits=items.filter(x=>x.estado==='Ganada').reduce((s,x)=>s+x.unidadesGanadas,0);let cost=items.filter(x=>x.estado==='Ganada').reduce((s,x)=>s+x.unidadesGanadas*x.aporteUnitario,0);if(!Array.isArray(r.modelItems)&&r.estado==='Ganada'&&items.length===1&&!cost)cost=n(r.unidadesEntregadas||r.unidades||items[0].unidades)*items[0].aporteUnitario;const open=items.some(x=>x.estado==='En curso'||x.estado==='Sin definir'),won=items.some(x=>x.estado==='Ganada');let state=String(r.estado||'En curso');if(Array.isArray(r.modelItems)&&r.modelItems.length)state=open?'En curso':(won?'Ganada':'Perdida');const pending=open?Math.max(0,approved-cost):0,released=Math.max(0,approved-cost-pending);return{items,approved,cost,pending,released,wonUnits,refUnits:n(r.unidades),state}
+}
+function selected(id){return $(id)?.value||''}
+function filtered(){
+  normalizeRows();const month=selected('fMonth'),channel=selected('fChannel'),kam=selected('fExec'),state=selected('fState'),model=selected('fModelV12'),q=String($('fSearch')?.value||'').trim().toLowerCase();
+  return rows().filter(r=>{const m=metrics(r),models=m.items.map(x=>x.modelo).join(' ');return(!month||r.mesOrigen===month)&&(!channel||r.canal===channel)&&(!kam||canonical(r.ejecutivo,r.ruc)===kam)&&(!state||m.state===state)&&(!model||m.items.some(x=>x.modelo===model))&&(!q||[r.cliente,r.ruc,r.ejecutivo,models].join(' ').toLowerCase().includes(q))})
+}
+function aggregate(list){const a={clients:new Set(),ops:list.length,won:0,lost:0,open:0,ref:0,wonUnits:0,approved:0,cost:0,pending:0,released:0};list.forEach(r=>{const m=metrics(r);a.clients.add(r.ruc||r.cliente);a.ref+=m.refUnits;a.wonUnits+=m.wonUnits;a.approved+=m.approved;a.cost+=m.cost;a.pending+=m.pending;a.released+=m.released;if(m.state==='Ganada')a.won+
