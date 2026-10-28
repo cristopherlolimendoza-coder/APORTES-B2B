@@ -1,1 +1,1 @@
-Prueba de conexión automática Cloudflare ↔ GitHub. 2026-10-28 · V10 Worker inline activo · commit c937f32.
+Prueba de conexión automática Cloudflare ↔ GitHub. 2026-10-28 · V10 inline dentro de index-v9 · commit ffce5d7.
