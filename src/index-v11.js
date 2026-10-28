@@ -3,6 +3,7 @@ export { AportesDB };
 
 const CANONICAL_NAME = 'Fiorella Zoe Canales Gomez';
 const TARGET_RUCS = new Set(['20114803228', '20100318696']);
+const PANEL_LOADER = '<script src="/panel-v12-loader.js?v=20261028-1"></script>';
 
 function normalize(value) {
   return String(value ?? '')
@@ -58,6 +59,29 @@ async function rewriteJson(response) {
   }
 }
 
+async function injectPanel(response) {
+  try {
+    const html = await response.text();
+    const output = html.includes('/panel-v12-loader.js')
+      ? html
+      : html.replace('</body>', `${PANEL_LOADER}</body>`);
+    const headers = new Headers(response.headers);
+    headers.set('content-type', 'text/html; charset=utf-8');
+    headers.set('cache-control', 'no-store, max-age=0, must-revalidate');
+    headers.set('pragma', 'no-cache');
+    headers.set('expires', '0');
+    headers.delete('content-length');
+    headers.delete('content-encoding');
+    return new Response(output, {
+      status: response.status,
+      statusText: response.statusText,
+      headers
+    });
+  } catch {
+    return response;
+  }
+}
+
 export default {
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
@@ -83,15 +107,7 @@ export default {
     }
 
     if (path === '/' || path === '/index.html') {
-      const headers = new Headers(response.headers);
-      headers.set('cache-control', 'no-store, max-age=0, must-revalidate');
-      headers.set('pragma', 'no-cache');
-      headers.set('expires', '0');
-      return new Response(response.body, {
-        status: response.status,
-        statusText: response.statusText,
-        headers
-      });
+      return injectPanel(response);
     }
 
     return response;
