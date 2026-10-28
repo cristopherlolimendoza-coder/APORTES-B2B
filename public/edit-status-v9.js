@@ -1,43 +1,29 @@
-/* HONOR B2B V9: el editor solo permite Ganada, Perdida y En proceso. */
+/* HONOR B2B V10: editor con tres estados y guardado verificado del mes vigente. */
 (()=>{
 'use strict';
 const $=id=>document.getElementById(id);
 const normalize=v=>v==='Ganada'?'Ganada':(v==='Perdida'||v==='Descartado'?'Perdida':'En curso');
 const OPTIONS='<option value="Ganada">Ganada</option><option value="Perdida">Perdida</option><option value="En curso">En proceso</option>';
 let applying=false,queued=false;
-
-function patchSelect(select){
-  if(!select)return;
-  const current=normalize(select.value);
-  if(select.innerHTML!==OPTIONS)select.innerHTML=OPTIONS;
-  select.value=current;
-  const won=select.closest('.edit-item')?.querySelector('[data-won]');
-  if(won){
-    won.disabled=current!=='Ganada';
-    if(current!=='Ganada')won.value=0;
-  }
-}
-function patchEditor(){
-  if(applying)return;applying=true;
-  try{
-    document.querySelectorAll('#editItems select[data-state]').forEach(patchSelect);
-    const sub=$('editDlg')?.querySelector('.dlg-head .sub');
-    if(sub)sub.textContent='Cliente, RUC, KAM, canal y mes de origen no se editan. Solo puedes elegir Ganada, Perdida o En proceso.';
-    const modelSub=$('editItems')?.previousElementSibling;
-    if(modelSub?.classList?.contains('sub'))modelSub.textContent='Selecciona Ganada, Perdida o En proceso. Si se ganó parcialmente, indica las unidades que sí van.';
-    const version=document.querySelector('.version');
-    if(version?.firstChild)version.firstChild.textContent='V9 EDICIÓN CON 3 ESTADOS';
-  }finally{applying=false;}
-}
-function schedule(){if(queued)return;queued=true;setTimeout(()=>{queued=false;patchEditor();},0)}
-function install(){
-  const items=$('editItems'),dlg=$('editDlg');
-  if(!items||!dlg)return setTimeout(install,100);
-  new MutationObserver(schedule).observe(items,{childList:true,subtree:true});
-  new MutationObserver(()=>{if(dlg.open){schedule();setTimeout(patchEditor,40);setTimeout(patchEditor,160)}}).observe(dlg,{attributes:true,attributeFilter:['open']});
-  document.addEventListener('click',e=>{if(e.target.closest('[data-edit]')){setTimeout(patchEditor,0);setTimeout(patchEditor,80);setTimeout(patchEditor,250)}});
-  dlg.addEventListener('change',e=>{if(e.target.matches('select[data-state]')){patchSelect(e.target);setTimeout(patchEditor,0)}});
-  patchEditor();setTimeout(patchEditor,600);setTimeout(patchEditor,1800);
-}
+function patchSelect(select){if(!select)return;const current=normalize(select.value);if(select.innerHTML!==OPTIONS)select.innerHTML=OPTIONS;select.value=current;const won=select.closest('.edit-item')?.querySelector('[data-won]');if(won){won.disabled=current!=='Ganada';if(current!=='Ganada')won.value=0}}
+function patchEditor(){if(applying)return;applying=true;try{document.querySelectorAll('#editItems select[data-state]').forEach(patchSelect);const sub=$('editDlg')?.querySelector('.dlg-head .sub');if(sub)sub.textContent='Cliente, RUC, KAM, canal y mes de origen no se editan. Solo puedes elegir Ganada, Perdida o En proceso.';const modelSub=$('editItems')?.previousElementSibling;if(modelSub?.classList?.contains('sub'))modelSub.textContent='Selecciona Ganada, Perdida o En proceso. Si se ganó parcialmente, indica las unidades que sí van.';const version=document.querySelector('.version');if(version?.firstChild)version.firstChild.textContent='V10 MES VIGENTE GUARDADO'}finally{applying=false}}
+function schedule(){if(queued)return;queued=true;setTimeout(()=>{queued=false;patchEditor()},0)}
+function install(){const items=$('editItems'),dlg=$('editDlg');if(!items||!dlg)return setTimeout(install,100);new MutationObserver(schedule).observe(items,{childList:true,subtree:true});new MutationObserver(()=>{if(dlg.open){schedule();setTimeout(patchEditor,40);setTimeout(patchEditor,160)}}).observe(dlg,{attributes:true,attributeFilter:['open']});document.addEventListener('click',e=>{if(e.target.closest('[data-edit]')){setTimeout(patchEditor,0);setTimeout(patchEditor,80);setTimeout(patchEditor,250)}});dlg.addEventListener('change',e=>{if(e.target.matches('select[data-state]')){patchSelect(e.target);setTimeout(patchEditor,0)}});patchEditor();setTimeout(patchEditor,600);setTimeout(patchEditor,1800)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
+})();
+
+(()=>{
+'use strict';
+const SESSION='honor_b2b_admin_session',MONTHS=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'],ABBR=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const $=id=>document.getElementById(id),nval=v=>{const n=Number(String(v??'').replace(/,/g,''));return Number.isFinite(n)&&n>=0?n:0},uid=()=>('M-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8)),rows=()=>typeof DATA!=='undefined'&&Array.isArray(DATA)?DATA:[];
+function state(v){return v==='Ganada'?'Ganada':v==='Perdida'||v==='Descartado'?'Perdida':'En curso'}
+function periodCode(){const m=MONTHS.indexOf($('editCloseMonth')?.value||''),y=Number($('editCloseYear')?.value);return m>=0&&y>=2020?ABBR[m]+'-'+String(y).slice(-2):''}
+function record(){const id=$('editId')?.value;return rows().find(r=>String(r.id)===String(id))}
+function items(r){const old=Array.isArray(r?.modelItems)?r.modelItems:[];return [...document.querySelectorAll('#editItems .edit-item')].map((el,i)=>{const p=old.find(x=>String(x.id||'')===String(el.dataset.mid||''))||old[i]||{},s=state(el.querySelector('[data-state]')?.value);return{id:el.dataset.mid||p.id||uid(),modelo:el.querySelector('.model-name strong')?.textContent.trim()||p.modelo||'',unidades:nval(el.dataset.proposed),aporteUnitario:nval(el.dataset.rate),estado:s,unidadesGanadas:s==='Ganada'?nval(el.querySelector('[data-won]')?.value):0,nota:String(p.nota||'')}})}
+function accountState(it){return it.some(x=>x.estado==='En curso')?'En curso':it.some(x=>x.estado==='Ganada')?'Ganada':'Perdida'}
+function msg(t,ok=false){const e=$('editError');if(!e)return;e.textContent=t;e.style.display='block';e.classList.remove('save-ok','save-error');e.classList.add(ok?'save-ok':'save-error')}
+async function rev(id){const r=await fetch('/api/data',{cache:'no-store'});if(!r.ok)throw Error('No se pudo consultar la cuenta.');const j=await r.json(),x=(j.entries||[]).find(e=>String(e.id)===String(id));return Number(x?.rev)||0}
+async function save(ev){ev?.preventDefault();ev?.stopImmediatePropagation();const r=record();if(!r)return msg('No se encontró la cuenta.');const it=items(r);if(!it.length)return msg('La cuenta no tiene modelos.');if(it.some(x=>x.estado==='Ganada'&&x.unidadesGanadas<=0))return msg('Cuando está Ganada, indica al menos una unidad.');if(it.some(x=>x.estado==='Ganada'&&x.unidades>0&&x.unidadesGanadas>x.unidades))return msg('Las unidades ganadas no pueden superar las referenciales.');const period=periodCode();if(!period)return msg('Selecciona mes y año.');const st=accountState(it),month=$('editCloseMonth').value,year=Number($('editCloseYear').value),key=sessionStorage.getItem(SESSION)||'';if(!key)return msg('Activa nuevamente la edición.');const won=it.filter(x=>x.estado==='Ganada').reduce((s,x)=>s+x.unidadesGanadas,0),cost=it.filter(x=>x.estado==='Ganada').reduce((s,x)=>s+x.unidadesGanadas*x.aporteUnitario,0),patch={cliente:String(r.cliente||''),ruc:String(r.ruc||''),canal:r.canal||'Empresas',ejecutivo:String(r.ejecutivo||''),modelos:String(r.modelos||''),unidades:nval(r.unidades),aporte:nval(r.aporte),estado:st,mesOrigen:String(r.__mesOrigenOriginal||r.mesOrigen||''),mesSeguimiento:period,mesCierre:st==='En curso'?'':month,anioCierre:st==='En curso'?null:year,comentario:String(r.comentario||''),nota:String(r.nota||''),unidadesEntregadas:won,aportePagado:cost,modelItems:it};const b=$('editSave');b.disabled=true;b.textContent='Guardando…';msg('Guardando y verificando '+month+' '+year+'…',true);try{const revision=await rev(r.id),response=await fetch('/api/save',{method:'PUT',headers:{Authorization:'Bearer '+key,'Content-Type':'application/json'},body:JSON.stringify({id:String(r.id),isNew:false,rev:revision,patch})}),j=await response.json();if(!response.ok||!j.ok)throw Error(j.error||'No se pudo guardar.');const check=await fetch('/api/data',{cache:'no-store'}),data=await check.json(),saved=(data.entries||[]).find(x=>String(x.id)===String(r.id));if(String(saved?.patch?.mesSeguimiento||'')!==period)throw Error('El mes vigente no quedó registrado.');msg('Guardado correcto en '+month+' '+year+'.',true);setTimeout(()=>location.reload(),650)}catch(e){msg(e.message||'No se pudo guardar.');b.disabled=false;b.textContent='Guardar cambios'}}
+function installSave(){const old=$('editSave');if(!old)return setTimeout(installSave,100);if(old.dataset.periodV10==='1')return;const b=old.cloneNode(true);b.dataset.periodV10='1';b.textContent='Guardar cambios';old.replaceWith(b);b.addEventListener('click',save,true);const dlg=$('editDlg');if(dlg)new MutationObserver(()=>{if(!$('editSave')?.dataset.periodV10)installSave()}).observe(dlg,{childList:true,subtree:true})}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',installSave,{once:true});else installSave();
 })();
