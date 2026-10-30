@@ -1,0 +1,65 @@
+textContent = 'Exportar CSV';
+        exportButton.addEventListener('click', exportFilteredCsv);
+        tools.appendChild(exportButton);
+        head.appendChild(tools);
+      }
+    }
+
+    return true;
+  }
+
+  function renderGlobalTotals(list, data) {
+    const target = $('filterTotals');
+    if (!target) return;
+    target.innerHTML = [
+      kpi('Oportunidades filtradas', number(data.ops), `${number(data.clients.size)} clientes`),
+      kpi('Unidades referenciales', number(data.refUnits), 'Volumen del filtro'),
+      kpi('Unidades ganadas', number(data.wonUnits), 'Confirmadas', 'good'),
+      kpi('Aporte pendiente', money(data.pending), 'Por definir', 'open money')
+    ].join('');
+    const count = $('v13AccountCount');
+    if (count) count.textContent = `${number(list.length)} oportunidades visibles`;
+  }
+
+  function renderSummary(list, data) {
+    const kpis = $('v13SummaryKpis');
+    if (!kpis) return;
+    kpis.innerHTML = [
+      kpi('Clientes', number(data.clients.size), 'Únicos'),
+      kpi('Oportunidades', number(data.ops), 'Cuentas registradas'),
+      kpi('Ganadas', number(data.won), `${percent(data.winRate)} conversión`, 'good'),
+      kpi('En curso', number(data.open), 'Requieren seguimiento', 'open'),
+      kpi('Unidades propuestas', number(data.refUnits), 'Referenciales'),
+      kpi('Unidades ganadas', number(data.wonUnits), 'Confirmadas', 'good')
+    ].join('');
+
+    const months = monthData(list);
+    const statusTarget = $('v13StatusMonths');
+    statusTarget.innerHTML = months.map(item => {
+      const total = Math.max(1, item.data.ops);
+      return `<div class="v13-month-row">
+        <strong>${esc(item.label)}</strong>
+        <div class="v13-stack" title="${item.data.ops} oportunidades">
+          <i style="width:${item.data.won / total * 100}%;background:#247a4b"></i>
+          <i style="width:${item.data.lost / total * 100}%;background:#c91f26"></i>
+          <i style="width:${item.data.open / total * 100}%;background:#315f91"></i>
+        </div>
+        <span>G ${number(item.data.won)} · P ${number(item.data.lost)} · EC ${number(item.data.open)}</span>
+      </div>`;
+    }).join('') || empty();
+
+    const maxUnits = Math.max(1, ...months.flatMap(item => [item.data.refUnits, item.data.wonUnits]));
+    $('v13UnitsMonths').innerHTML = months.map(item => `
+      <div class="v13-unit-row">
+        <strong>${esc(item.label)}</strong>
+        <div class="v13-dual">
+          <div class="v13-track"><div class="v13-fill" style="width:${item.data.refUnits / maxUnits * 100}%;background:#aeb8c5"></div></div>
+          <div class="v13-track"><div class="v13-fill" style="width:${item.data.wonUnits / maxUnits * 100}%;background:#247a4b"></div></div>
+        </div>
+        <span>${number(item.data.refUnits)} ref. · ${number(item.data.wonUnits)} gan.</span>
+      </div>`).join('') || empty();
+
+    const kam = kamData(list).sort((a, b) => b.ops - a.ops || b.wonUnits - a.wonUnits);
+    $('v13KamSummary').innerHTML = kam.map(item => {
+      const closed = item.won + item.lost;
+      const conversion = closed ? item.won / closed * 100 : 0;

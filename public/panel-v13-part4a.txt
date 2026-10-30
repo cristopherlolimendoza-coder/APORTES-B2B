@@ -1,0 +1,55 @@
+13-view="accounts">Cuentas</button>`;
+    nav.querySelectorAll('[data-v13-view]').forEach(button => {
+      button.addEventListener('click', () => setView(button.dataset.v13View));
+    });
+    setView('res');
+  }
+
+  function setView(view) {
+    document.querySelectorAll('.view').forEach(section => section.classList.remove('on'));
+    document.querySelectorAll('[data-v13-view]').forEach(button => {
+      button.classList.toggle('on', button.dataset.v13View === view);
+    });
+    $(view)?.classList.add('on');
+    scheduleRender();
+  }
+
+  function mountCustomViews() {
+    const res = $('res');
+    const funds = $('funds');
+    const accounts = $('accounts');
+    if (!res || !funds || !accounts) return false;
+
+    if (!$('v13Summary')) {
+      [...res.children].forEach(child => child.classList.add('v13-hidden'));
+      res.insertAdjacentHTML('afterbegin', `
+        <div id="v13Summary" class="v13-grid">
+          <div id="v13SummaryKpis" class="v13-kpis"></div>
+          <div class="v13-two">
+            <section class="v13-card">
+              <div class="v13-card-head"><div><div class="v13-title">Cuentas por estado y por mes</div><div class="v13-sub">Evolución comercial: ganadas, perdidas y en curso.</div></div></div>
+              <div id="v13StatusMonths" class="v13-month-list"></div>
+              <div class="v13-legend"><span><i style="background:#247a4b"></i>Ganadas</span><span><i style="background:#c91f26"></i>Perdidas</span><span><i style="background:#315f91"></i>En curso</span></div>
+            </section>
+            <section class="v13-card">
+              <div class="v13-card-head"><div><div class="v13-title">Unidades por mes</div><div class="v13-sub">Comparación entre unidades referenciales y unidades ganadas.</div></div></div>
+              <div id="v13UnitsMonths"></div>
+              <div class="v13-legend"><span><i style="background:#aeb8c5"></i>Referenciales</span><span><i style="background:#247a4b"></i>Ganadas</span></div>
+            </section>
+          </div>
+          <section class="v13-card">
+            <div class="v13-card-head"><div><div class="v13-title">Desempeño comercial por KAM</div><div class="v13-sub">Carga de cuentas, resultados y unidades confirmadas.</div></div></div>
+            <div class="v13-table-wrap"><table class="v13-table"><thead><tr><th>KAM</th><th>Oportunidades</th><th>Ganadas</th><th>En curso</th><th>Perdidas</th><th>Unid. ganadas</th><th>Conversión</th></tr></thead><tbody id="v13KamSummary"></tbody></table></div>
+          </section>
+        </div>`);
+    }
+
+    if (!$('v13Funds')) {
+      [...funds.children].forEach(child => child.classList.add('v13-hidden'));
+      funds.insertAdjacentHTML('afterbegin', `
+        <div id="v13Funds" class="v13-grid">
+          <div id="v13FundKpis" class="v13-kpis"></div>
+          <section class="v13-card">
+            <div class="v13-card-head"><div><div class="v13-title">Aportes mes a mes</div><div class="v13-sub">Aprobado, costo confirmado y monto aún pendiente.</div></div></div>
+            <div id="v13FundMonths"></div>
+            <div class="v13-legend"><

@@ -1,0 +1,80 @@
+.textContent = 'Resumen comercial, control de aportes y gestión de cuentas';
+  }
+
+  let renderTimer = null;
+  function scheduleRender(delay = 0) {
+    clearTimeout(renderTimer);
+    renderTimer = setTimeout(renderAll, delay);
+  }
+
+  function exportFilteredCsv() {
+    const list = filteredRows();
+    const headers = [
+      'ID', 'Mes origen', 'Canal', 'RUC', 'Cliente', 'KAM', 'Estado',
+      'Unidades referenciales', 'Unidades ganadas', 'Aporte aprobado USD',
+      'Costo confirmado USD', 'Aporte pendiente USD', 'Modelos'
+    ];
+    const values = list.map(row => {
+      const info = metrics(row);
+      return [
+        row.id,
+        MONTH_NAME[row.mesOrigen] || row.mesOrigen || '',
+        row.canal || '',
+        row.ruc || '',
+        row.cliente || '',
+        canonicalExecutive(row.ejecutivo, row.ruc),
+        info.state,
+        info.refUnits,
+        info.wonUnits,
+        info.approved,
+        info.cost,
+        info.pending,
+        info.items.map(item => `${item.modelo} (${item.estado})`).join(' | ')
+      ];
+    });
+    const csv = [headers, ...values]
+      .map(row => row.map(value => `"${String(value ?? '').replace(/"/g, '""')}"`).join(';'))
+      .join('\r\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'HONOR_Entel_Cuentas_Filtradas.csv';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function bindUpdates() {
+    ['fMonth', 'fChannel', 'fExec', 'fState', 'fCloseMonth', 'fCloseYear'].forEach(id => {
+      $(id)?.addEventListener('change', () => scheduleRender(0));
+    });
+    $('fSearch')?.addEventListener('input', () => scheduleRender(0));
+    $('clearFilters')?.addEventListener('click', () => scheduleRender(0));
+
+    const sync = $('syncText');
+    if (sync) new MutationObserver(() => scheduleRender(20)).observe(sync, { childList: true, subtree: true, characterData: true });
+    const accountRows = $('accountRows');
+    if (accountRows) new MutationObserver(() => scheduleRender(30)).observe(accountRows, { childList: true, subtree: true });
+  }
+
+  function start(attempt = 0) {
+    if (typeof DATA === 'undefined' || !document.querySelector('.tabs') || !$('res') || !$('funds') || !$('accounts')) {
+      if (attempt < 30) setTimeout(() => start(attempt + 1), 150);
+      return;
+    }
+    installStyles();
+    normalizeNames();
+    simplifyFilters();
+    if (!mountCustomViews()) return;
+    mountNavigation();
+    bindUpdates();
+    renderAll();
+    setTimeout(renderAll, 700);
+    setTimeout(renderAll, 1800);
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => start(), { once: true });
+  else start();
+})();

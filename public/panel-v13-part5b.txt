@@ -1,0 +1,66 @@
+
+      return `<tr>
+        <td><strong>${esc(item.name)}</strong></td>
+        <td>${number(item.ops)}</td>
+        <td>${number(item.won)}</td>
+        <td>${number(item.open)}</td>
+        <td>${number(item.lost)}</td>
+        <td>${number(item.wonUnits)}</td>
+        <td>${percent(conversion)}</td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="7">Sin datos.</td></tr>';
+  }
+
+  function renderFunds(list, data) {
+    const kpis = $('v13FundKpis');
+    if (!kpis) return;
+    kpis.innerHTML = [
+      kpi('Aporte aprobado', money(data.approved), 'Referencia total', 'money'),
+      kpi('Costo confirmado', money(data.cost), 'Modelos ganados', 'good money'),
+      kpi('Aporte pendiente', money(data.pending), 'En curso o por definir', 'open money'),
+      kpi('Aporte liberado', money(data.released), 'No ejecutado', 'money'),
+      kpi('Unidades ganadas', number(data.wonUnits), 'Generan costo', 'good'),
+      kpi('Costo por unidad', money(data.wonUnits ? data.cost / data.wonUnits : 0), 'Promedio confirmado', 'money')
+    ].join('');
+
+    const months = monthData(list);
+    const maxMoney = Math.max(1, ...months.flatMap(item => [item.data.approved, item.data.cost, item.data.pending]));
+    $('v13FundMonths').innerHTML = months.map(item => `
+      <div class="v13-money-row">
+        <strong>${esc(item.label)}</strong>
+        <div class="v13-money-bars">
+          <div class="v13-money-bar"><i style="width:${item.data.approved / maxMoney * 100}%;background:#aeb8c5"></i></div>
+          <div class="v13-money-bar"><i style="width:${item.data.cost / maxMoney * 100}%;background:#247a4b"></i></div>
+          <div class="v13-money-bar"><i style="width:${item.data.pending / maxMoney * 100}%;background:#315f91"></i></div>
+        </div>
+        <span>${money(item.data.cost)} conf. · ${money(item.data.pending)} pend.</span>
+      </div>`).join('') || empty();
+
+    const models = modelData(list)
+      .sort((a, b) => b.approved - a.approved)
+      .slice(0, 12);
+    $('v13ModelFunds').innerHTML = models.map(item => `
+      <tr>
+        <td><strong>${esc(item.name)}</strong></td>
+        <td>${number(item.accounts.size)}</td>
+        <td>${number(item.refUnits)}</td>
+        <td>${number(item.wonUnits)}</td>
+        <td class="right">${money(item.approved)}</td>
+        <td class="right">${money(item.cost)}</td>
+        <td class="right">${money(item.pending)}</td>
+      </tr>`).join('') || '<tr><td colspan="7">Sin datos.</td></tr>';
+
+    const kam = kamData(list)
+      .filter(item => item.pending > 0)
+      .sort((a, b) => b.pending - a.pending)
+      .slice(0, 10);
+    const maxKam = Math.max(1, ...kam.map(item => item.pending));
+    $('v13KamFunds').innerHTML = kam.map(item => `
+      <div class="v13-rank-row">
+        <strong title="${esc(item.name)}">${esc(item.name)}</strong>
+        <div class="v13-track"><div class="v13-fill" style="width:${item.pending / maxKam * 100}%;background:#315f91"></div></div>
+        <span>${money(item.pending)}</span>
+      </div>`).join('') || empty('No hay aportes pendientes.');
+
+    const openAccounts = list
+      .map(

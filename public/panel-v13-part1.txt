@@ -1,0 +1,174 @@
+/* HONOR–Entel · Panel profesional simple v13 */
+(() => {
+  'use strict';
+
+  if (window.__HONOR_PANEL_V13__) return;
+  window.__HONOR_PANEL_V13__ = true;
+
+  const VERSION = 'V20261030 · PANEL SIMPLE';
+  const CANONICAL_NAME = 'Fiorella Zoe Canales Gomez';
+  const TARGET_RUCS = new Set(['20114803228', '20100318696']);
+  const MONTHS = ['may-26', 'jun-26', 'jul-26', 'ago-26', 'sep-26', 'oct-26', 'nov-26', 'dic-26'];
+  const MONTH_NAME = {
+    'may-26': 'Mayo',
+    'jun-26': 'Junio',
+    'jul-26': 'Julio',
+    'ago-26': 'Agosto',
+    'sep-26': 'Septiembre',
+    'oct-26': 'Octubre',
+    'nov-26': 'Noviembre',
+    'dic-26': 'Diciembre'
+  };
+
+  const $ = id => document.getElementById(id);
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[ch]));
+  const number = value => new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(n(value));
+  const money = value => new Intl.NumberFormat('en-US', {
+    style: 'currency', currency: 'USD', maximumFractionDigits: 0
+  }).format(n(value));
+  const percent = value => `${Math.round(Number(value) || 0)}%`;
+  const n = value => {
+    const parsed = Number(String(value ?? '').replace(/,/g, ''));
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+  };
+  const normalize = value => String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+
+  function rows() {
+    try {
+      return typeof DATA !== 'undefined' && Array.isArray(DATA) ? DATA : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function canonicalExecutive(value, ruc = '') {
+    const cleanRuc = String(ruc || '').replace(/\D/g, '');
+    const key = normalize(value);
+    if (TARGET_RUCS.has(cleanRuc)) return CANONICAL_NAME;
+    if (key === 'fiorella zoe canales gomez' || key === 'fiorella zoe canales jean') return CANONICAL_NAME;
+    return String(value || '').trim();
+  }
+
+  function normalizeNames() {
+    rows().forEach(row => {
+      row.ejecutivo = canonicalExecutive(row.ejecutivo, row.ruc);
+    });
+  }
+
+  function parseModels(row) {
+    if (Array.isArray(row?.modelItems) && row.modelItems.length) {
+      return row.modelItems.map((item, index) => ({
+        id: String(item.id || `M${index + 1}`),
+        modelo: String(item.modelo || '').trim() || 'Modelo sin definir',
+        unidades: n(item.unidades),
+        aporteUnitario: n(item.aporteUnitario),
+        unidadesGanadas: n(item.unidadesGanadas),
+        estado: ['Sin definir', 'En curso', 'Ganada', 'Perdida', 'Descartado'].includes(item.estado)
+          ? item.estado
+          : 'En curso'
+      }));
+    }
+
+    const raw = String(row?.modelos || '').trim();
+    if (!raw) return [];
+    const parts = raw.split(/\s*\|\s*/).filter(Boolean);
+    return parts.map((part, index) => {
+      const bits = part.split('·').map(value => value.trim());
+      const unitsMatch = (bits[1] || '').match(/([\d,.]+|\?)\s*u/i);
+      const rateMatch = (bits[2] || '').match(/\$\s*([\d,.]+)/i);
+      const units = unitsMatch && unitsMatch[1] !== '?' ? n(unitsMatch[1]) : 0;
+      const rate = rateMatch ? n(rateMatch[1]) : 0;
+      let state = 'En curso';
+      let won = 0;
+      if (row.estado === 'Perdida') state = 'Perdida';
+      else if (row.estado === 'Ganada' && parts.length === 1) {
+        state = 'Ganada';
+        won = n(row.unidadesEntregadas || row.unidades || units);
+      } else if (row.estado === 'Ganada') state = 'Sin definir';
+      return {
+        id: `M${index + 1}`,
+        modelo: bits[0] || part,
+        unidades: units,
+        aporteUnitario: rate,
+        unidadesGanadas: won,
+        estado: state
+      };
+    });
+  }
+
+  function metrics(row) {
+    const items = parseModels(row);
+    const approved = n(row.aporte);
+    const wonUnits = items
+      .filter(item => item.estado === 'Ganada')
+      .reduce((sum, item) => sum + item.unidadesGanadas, 0);
+    let cost = items
+      .filter(item => item.estado === 'Ganada')
+      .reduce((sum, item) => sum + item.unidadesGanadas * item.aporteUnitario, 0);
+
+    if (!Array.isArray(row.modelItems) && row.estado === 'Ganada' && items.length === 1 && !cost) {
+      cost = n(row.unidadesEntregadas || row.unidades || items[0].unidades) * items[0].aporteUnitario;
+    }
+
+    const hasOpen = items.some(item => item.estado === 'En curso' || item.estado === 'Sin definir');
+    const hasWon = items.some(item => item.estado === 'Ganada');
+    let state = row.estado || 'En curso';
+    if (Array.isArray(row.modelItems) && row.modelItems.length) {
+      state = hasOpen ? 'En curso' : (hasWon ? 'Ganada' : 'Perdida');
+    }
+
+    const pending = hasOpen ? Math.max(0, approved - cost) : 0;
+    const released = Math.max(0, approved - cost - pending);
+    return {
+      items,
+      approved,
+      wonUnits,
+      cost,
+      pending,
+      released,
+      state,
+      refUnits: n(row.unidades)
+    };
+  }
+
+  function filteredRows() {
+    const month = $('fMonth')?.value || '';
+    const channel = $('fChannel')?.value || '';
+    const executive = $('fExec')?.value || '';
+    const state = $('fState')?.value || '';
+    const closeMonth = $('fCloseMonth')?.value || '';
+    const closeYear = $('fCloseYear')?.value || '';
+    const query = normalize($('fSearch')?.value || '');
+
+    return rows().filter(row => {
+      const info = metrics(row);
+      const rowExecutive = canonicalExecutive(row.ejecutivo, row.ruc);
+      const modelText = info.items.map(item => item.modelo).join(' ');
+      const searchable = normalize([
+        row.cliente,
+        row.ruc,
+        rowExecutive,
+        row.canal,
+        row.modelos,
+        modelText,
+        row.comentario,
+        row.nota
+      ].join(' '));
+      return (!month || row.mesOrigen === month)
+        && (!channel || row.canal === channel)
+        && (!executive || rowExecutive === executive)
+        && (!state || info.state === state)
+        && (!closeMonth || (closeMonth === 'SIN' ? !row.mesCierre : row.mesCierre === closeMonth))
+        && (!closeYear || String(row.anioCierre || '') === closeYear)
+        && (!query || searchable.includes(query));
+    });
+  }
+
+  fu

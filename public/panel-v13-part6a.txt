@@ -1,0 +1,59 @@
+row => ({ row, info: metrics(row) }))
+      .filter(item => item.info.pending > 0)
+      .sort((a, b) => b.info.pending - a.info.pending)
+      .slice(0, 12);
+    $('v13OpenFunds').innerHTML = openAccounts.map(item => `
+      <tr>
+        <td><strong>${esc(item.row.cliente)}</strong><div class="mut">${esc(item.row.ruc || '')}</div></td>
+        <td>${esc(canonicalExecutive(item.row.ejecutivo, item.row.ruc) || 'Sin KAM')}</td>
+        <td>${esc(MONTH_NAME[item.row.mesOrigen] || item.row.mesOrigen || '')}</td>
+        <td>${number(item.info.refUnits)}</td>
+        <td class="right">${money(item.info.approved)}</td>
+        <td class="right">${money(item.info.cost)}</td>
+        <td class="right"><strong>${money(item.info.pending)}</strong></td>
+        <td>${badge(item.info.state)}</td>
+      </tr>`).join('') || '<tr><td colspan="8">No hay cuentas con aporte pendiente.</td></tr>';
+  }
+
+  function renderAccounts(list, data) {
+    const kpis = $('v13AccountKpis');
+    if (!kpis) return;
+    kpis.innerHTML = [
+      kpi('Clientes', number(data.clients.size), 'Únicos'),
+      kpi('Oportunidades', number(data.ops), 'Visibles'),
+      kpi('Ganadas', number(data.won), `${percent(data.winRate)} conversión`, 'good'),
+      kpi('En curso', number(data.open), 'Por gestionar', 'open'),
+      kpi('Perdidas', number(data.lost), 'Cerradas sin ejecución', 'bad'),
+      kpi('Unidades ganadas', number(data.wonUnits), 'Confirmadas', 'good')
+    ].join('');
+
+    const priority = list
+      .map(row => ({ row, info: metrics(row) }))
+      .filter(item => item.info.state === 'En curso')
+      .sort((a, b) => b.info.refUnits - a.info.refUnits || b.info.pending - a.info.pending)
+      .slice(0, 6);
+    $('v13AccountPriority').innerHTML = priority.map(item => `
+      <div class="v13-priority-item" title="${esc(item.row.cliente)}">
+        <b>${esc(item.row.cliente)}</b>
+        <span>${esc(canonicalExecutive(item.row.ejecutivo, item.row.ruc) || 'Sin KAM')} · ${esc(MONTH_NAME[item.row.mesOrigen] || item.row.mesOrigen || '')}</span>
+        <strong>${number(item.info.refUnits)} unidades</strong>
+        <span>${number(item.info.items.length)} modelo(s) · ${money(item.info.pending)} pendiente</span>
+      </div>`).join('') || empty('No hay cuentas en curso.');
+  }
+
+  function renderAll() {
+    normalizeNames();
+    rebuildKamFilter();
+    const list = filteredRows();
+    const data = aggregate(list);
+    renderGlobalTotals(list, data);
+    renderSummary(list, data);
+    renderFunds(list, data);
+    renderAccounts(list, data);
+
+    const version = document.querySelector('.version');
+    if (version?.firstChild) version.firstChild.textContent = VERSION;
+    const title = document.querySelector('.top h1');
+    if (title) title.textContent = 'HONOR–Entel · Panel de Aportes B2B';
+    const subtitle = document.querySelector('.top .mut');
+    if (subtitle) subtitle

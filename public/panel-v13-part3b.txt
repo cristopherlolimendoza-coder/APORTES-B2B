@@ -1,0 +1,41 @@
+dfe7;border-radius:10px;background:#fafbfd}
+      #accounts>.card:first-child{box-shadow:none!important}.v13-account-summary{margin:0}.v13-account-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+      #accounts .table-wrap{box-shadow:none!important}.table th{background:#f8fafc!important}.table td{padding:9px!important}.btn{transition:background .15s,border-color .15s,transform .05s}.btn:active{transform:translateY(1px)}
+      .v13-export{height:39px;border:1px solid var(--v13-line);border-radius:9px;background:#fff;padding:0 12px;font-weight:850;cursor:pointer;color:var(--v13-navy)}.v13-export:hover{background:#f5f7fa}
+      @media(max-width:1180px){.filters-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}.v13-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.v13-priority{grid-template-columns:repeat(2,minmax(0,1fr))}}
+      @media(max-width:820px){.app{padding:9px!important}.top{align-items:flex-start!important}.filters-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}.filters-grid .search{grid-column:1/-1!important}.v13-two{grid-template-columns:1fr}.v13-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.v13-month-row,.v13-unit-row,.v13-money-row{grid-template-columns:64px minmax(0,1fr)}.v13-month-row>span,.v13-unit-row>span,.v13-money-row>span{grid-column:2;text-align:left}.v13-priority{grid-template-columns:1fr 1fr}}
+      @media(max-width:520px){.filters-grid{grid-template-columns:1fr!important}.filters-grid .search{grid-column:auto!important}.tabs{max-width:none}.v13-kpis{grid-template-columns:1fr 1fr}.v13-kpi b{font-size:18px}.v13-kpi.money b{font-size:16px}.v13-priority{grid-template-columns:1fr}.v13-rank-row{grid-template-columns:minmax(90px,1fr) 1fr 72px}.top{padding:14px}.top h1{font-size:19px!important}}
+    `;
+    document.head.appendChild(style);
+  }
+
+  function rebuildKamFilter() {
+    const select = $('fExec');
+    if (!select) return;
+    const previous = canonicalExecutive(select.value);
+    const names = [...new Set(rows()
+      .map(row => canonicalExecutive(row.ejecutivo, row.ruc))
+      .filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b, 'es'));
+    select.innerHTML = '<option value="">Todos</option>' + names
+      .map(name => `<option value="${esc(name)}">${esc(name)}</option>`)
+      .join('');
+    select.value = names.includes(previous) ? previous : '';
+  }
+
+  function simplifyFilters() {
+    const closeMonth = $('fCloseMonth')?.closest('div');
+    const closeYear = $('fCloseYear')?.closest('div');
+    closeMonth?.classList.add('v13-hide-filter');
+    closeYear?.classList.add('v13-hide-filter');
+    if ($('fSearch')) $('fSearch').placeholder = 'Cliente, RUC, KAM o modelo';
+    if ($('clearFilters')) $('clearFilters').textContent = 'Limpiar';
+  }
+
+  function mountNavigation() {
+    const nav = document.querySelector('.tabs');
+    if (!nav) return;
+    nav.innerHTML = `
+      <button type="button" class="tab on" data-v13-view="res">Resumen</button>
+      <button type="button" class="tab" data-v13-view="funds">Aportes</button>
+      <button type="button" class="tab" data-v

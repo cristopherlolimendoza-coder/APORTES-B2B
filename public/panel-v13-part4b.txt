@@ -1,0 +1,46 @@
+span><i style="background:#aeb8c5"></i>Aprobado</span><span><i style="background:#247a4b"></i>Confirmado</span><span><i style="background:#315f91"></i>Pendiente</span></div>
+          </section>
+          <div class="v13-two">
+            <section class="v13-card">
+              <div class="v13-card-head"><div><div class="v13-title">Aportes por modelo</div><div class="v13-sub">Modelos con mayor aporte potencial y confirmado.</div></div></div>
+              <div class="v13-table-wrap"><table class="v13-table"><thead><tr><th>Modelo</th><th>Cuentas</th><th>Unid. ref.</th><th>Unid. ganadas</th><th>Aporte potencial</th><th>Confirmado</th><th>Pendiente</th></tr></thead><tbody id="v13ModelFunds"></tbody></table></div>
+            </section>
+            <section class="v13-card">
+              <div class="v13-card-head"><div><div class="v13-title">Pendiente por KAM</div><div class="v13-sub">Concentración del aporte que todavía debe definirse.</div></div></div>
+              <div id="v13KamFunds" class="v13-rank"></div>
+            </section>
+          </div>
+          <section class="v13-card">
+            <div class="v13-card-head"><div><div class="v13-title">Cuentas con mayor aporte pendiente</div><div class="v13-sub">Prioridades financieras para seguimiento.</div></div></div>
+            <div class="v13-table-wrap"><table class="v13-table"><thead><tr><th>Cuenta</th><th>KAM</th><th>Mes</th><th>Unid. ref.</th><th>Aprobado</th><th>Confirmado</th><th>Pendiente</th><th>Estado</th></tr></thead><tbody id="v13OpenFunds"></tbody></table></div>
+          </section>
+        </div>`);
+    }
+
+    if (!$('v13AccountKpis')) {
+      $('accountKpis')?.classList.add('v13-hidden');
+      const firstCard = accounts.querySelector(':scope > .card');
+      firstCard?.insertAdjacentHTML('afterend', `
+        <div id="v13AccountAnalysis" class="v13-grid v13-account-summary">
+          <div id="v13AccountKpis" class="v13-kpis"></div>
+          <section class="v13-card">
+            <div class="v13-card-head"><div><div class="v13-title">Prioridad de seguimiento</div><div class="v13-sub">Cuentas en curso con mayor volumen de unidades.</div></div><span id="v13AccountCount" class="v13-sub"></span></div>
+            <div id="v13AccountPriority" class="v13-priority"></div>
+          </section>
+        </div>`);
+
+      const head = firstCard?.querySelector('.head');
+      const title = firstCard?.querySelector('.title');
+      const sub = firstCard?.querySelector('.sub');
+      if (title) title.textContent = 'Cuentas';
+      if (sub) sub.textContent = 'Consulta y actualiza el resultado de cada cuenta. La edición continúa protegida con contraseña.';
+      if (head && !$('v13Export')) {
+        const tools = document.createElement('div');
+        tools.className = 'v13-account-tools';
+        const newButton = $('newAccount');
+        if (newButton) tools.appendChild(newButton);
+        const exportButton = document.createElement('button');
+        exportButton.id = 'v13Export';
+        exportButton.type = 'button';
+        exportButton.className = 'v13-export';
+        exportButton.
