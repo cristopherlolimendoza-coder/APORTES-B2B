@@ -3,7 +3,7 @@ export { AportesDB };
 
 const CANONICAL_NAME = 'Fiorella Zoe Canales Gomez';
 const TARGET_RUCS = new Set(['20114803228', '20100318696']);
-const PANEL_LOADER = '<script src="/panel-v13-loader.js?v=20261030-2"></script><script src="/panel-v14-director.js?v=20261102-1"></script>';
+const PANEL_LOADER = '<script src="/panel-v13-loader.js?v=20261030-2"></script><script src="/panel-v14-director.js?v=20261102-1"></script><script src="/panel-v14-polish.js?v=20261102-1"></script>';
 
 function normalize(value) {
   return String(value ?? '')
