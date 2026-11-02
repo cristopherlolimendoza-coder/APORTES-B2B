@@ -4,7 +4,7 @@
   if (window.__HONOR_PANEL_V14_POLISH__) return;
   window.__HONOR_PANEL_V14_POLISH__ = true;
 
-  const VERSION = 'V20261102 · VISTA DIRECTIVA';
+  const VERSION = 'V20261102.5 · FILTROS + TENDENCIA';
   const TITLE = 'HONOR–Entel · Panel de Aportes B2B';
   const SUBTITLE = 'Vista ejecutiva para dirección, control financiero y gestión de cuentas';
 
