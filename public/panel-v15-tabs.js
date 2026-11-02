@@ -5,13 +5,9 @@
   if (window.__HONOR_PANEL_V15_TABS__) return;
   window.__HONOR_PANEL_V15_TABS__ = true;
 
-  const VERSION = 'V20261102.2 · VISTA DIRECTIVA';
+  const VERSION = 'V20261102.4 · FILTROS + TENDENCIA';
   const VIEWS = ['res', 'funds', 'accounts'];
-  const LABELS = {
-    res: 'Resumen',
-    funds: 'Aportes',
-    accounts: 'Cuentas'
-  };
+  const LABELS = { res: 'Resumen', funds: 'Aportes', accounts: 'Cuentas' };
 
   const $ = id => document.getElementById(id);
   let activeView = 'res';
@@ -23,20 +19,17 @@
     const style = document.createElement('style');
     style.id = 'v15TabsStyle';
     style.textContent = `
-      /* Ningún KPI se comparte entre pestañas. */
-      #filterTotals,
+      /* Los nodos de compatibilidad se conservan ocultos para no romper el render original. */
+      #filterTotals,#v14FilterContext,
       .filters > #filterTotals,
       .filters > .kpis,
-      #resKpis,
-      #accountKpis,
-      #followKpis,
-      #fundKpis { display:none!important; }
+      #resKpis,#accountKpis,#followKpis,#fundKpis { display:none!important; }
 
       /* Solo puede existir una vista activa. */
       #res,#funds,#accounts,#follow { display:none!important; }
       #res.v15-active,#funds.v15-active,#accounts.v15-active { display:block!important; }
 
-      /* Retira todos los paneles heredados de Resumen y Aportes. */
+      /* Retira visualmente los paneles heredados de Resumen y Aportes. */
       #res > :not(#v13Summary),
       #funds > :not(#v13Funds) { display:none!important; }
 
@@ -53,16 +46,8 @@
         margin-right:auto;
       }
       .tabs[data-v15-tabs="1"] .tab { min-width:0!important; }
-      .tabs[data-v15-tabs="1"] .tab.on {
-        background:#17202a!important;
-        color:#fff!important;
-      }
-      .v15-tab-note {
-        margin:8px 2px 0;
-        font-size:10px;
-        color:#667085;
-        text-align:right;
-      }
+      .tabs[data-v15-tabs="1"] .tab.on { background:#17202a!important;color:#fff!important; }
+      .v15-tab-note { margin:8px 2px 0;font-size:10px;color:#667085;text-align:right; }
       @media(max-width:720px){
         .tabs[data-v15-tabs="1"]{display:grid!important;grid-template-columns:repeat(3,1fr)!important;max-width:none}
         .tabs[data-v15-tabs="1"] .tab{font-size:11px;padding:9px 6px}
@@ -72,21 +57,36 @@
     document.head.appendChild(style);
   }
 
-  function removeSharedPanels() {
-    // La fila que generaba los mismos cuadros sobre las tres pestañas.
-    $('filterTotals')?.remove();
+  function preserveCompatibilityPanels() {
+    const filters = document.querySelector('.filters');
+    const grid = filters?.querySelector('.filters-grid');
+    let totals = $('filterTotals');
+    if (filters && !totals) {
+      totals = document.createElement('div');
+      totals.id = 'filterTotals';
+      totals.className = 'kpis';
+      if (grid?.nextSibling) filters.insertBefore(totals, grid.nextSibling);
+      else filters.appendChild(totals);
+    }
+    if (totals) {
+      totals.setAttribute('aria-hidden', 'true');
+      totals.style.setProperty('display', 'none', 'important');
+    }
 
-    // Totales heredados que algunos scripts antiguos intentan volver a mostrar.
+    const context = $('v14FilterContext');
+    if (context) {
+      context.setAttribute('aria-hidden', 'true');
+      context.style.setProperty('display', 'none', 'important');
+    }
+
     ['resKpis', 'accountKpis', 'followKpis', 'fundKpis'].forEach(id => {
       const element = $(id);
-      if (element) {
-        element.replaceChildren();
-        element.style.setProperty('display', 'none', 'important');
-      }
+      if (element) element.style.setProperty('display', 'none', 'important');
     });
-
-    // Elimina cualquier grilla KPI que haya quedado directamente dentro de filtros.
-    document.querySelectorAll('.filters > .kpis').forEach(element => element.remove());
+    document.querySelectorAll('.filters > .kpis').forEach(element => {
+      element.style.setProperty('display', 'none', 'important');
+      element.setAttribute('aria-hidden', 'true');
+    });
   }
 
   function setVersion() {
@@ -122,7 +122,6 @@
       button.setAttribute('aria-selected', selected ? 'true' : 'false');
       button.tabIndex = selected ? 0 : -1;
     });
-
     document.body.dataset.v15View = view;
   }
 
@@ -149,7 +148,6 @@
         nav.insertAdjacentHTML('afterend', '<div class="v15-tab-note">Cada pestaña presenta indicadores y análisis exclusivos.</div>');
       }
     }
-
     return true;
   }
 
@@ -164,14 +162,12 @@
       });
       summaryRoot.style.removeProperty('display');
     }
-
     if (fundsRoot) {
       [...$('funds').children].forEach(child => {
         if (child !== fundsRoot) child.style.setProperty('display', 'none', 'important');
       });
       fundsRoot.style.removeProperty('display');
     }
-
     if (accountsRoot) accountsRoot.style.removeProperty('display');
   }
 
@@ -181,7 +177,7 @@
     try {
       if (!$('v14SummaryKpis') || !$('v14FundsKpis') || !$('v14AccountsKpis')) return false;
       installStyles();
-      removeSharedPanels();
+      preserveCompatibilityPanels();
       if (!rebuildNavigation()) return false;
       isolateLegacyContent();
       setVersion();
@@ -209,12 +205,8 @@
 
     const app = document.querySelector('.app');
     if (app) {
-      new MutationObserver(() => scheduleApply(20)).observe(app, {
-        childList: true,
-        subtree: true
-      });
+      new MutationObserver(() => scheduleApply(20)).observe(app, { childList: true, subtree: true });
     }
-
     [250, 700, 1500, 3000, 6000].forEach(delay => setTimeout(apply, delay));
   }
 
